@@ -25,8 +25,16 @@ const Chat = ({ userName, logoutFn }) => {
       socket.close();
     }
 
-    var wsUrl = `ws://localhost:8080/ws/${selectedChannel}`;
-    const ws = new WebSocket(wsUrl);
+
+    var loc = window.location, new_uri;
+    if (loc.protocol === "https:") {
+      new_uri = "wss:";
+    } else {
+      new_uri = "ws:";
+    }
+    new_uri += "//" + loc.host + `/ws/${selectedChannel}`;
+
+    const ws = new WebSocket(new_uri);
     setSocket(ws);
 
     ws.onopen = () => {
@@ -99,7 +107,7 @@ const Chat = ({ userName, logoutFn }) => {
   };
 
   function fetchChannels() {
-    fetch("http://localhost:8080/api/channels")
+    fetch("/api/channels")
       .then((x) => x.json())
       .then((data) => setChannels(data.channels));
   }
@@ -107,7 +115,7 @@ const Chat = ({ userName, logoutFn }) => {
   // Function to create a new channel
   const createChannel = async () => {
     if (newChannel.trim() !== "") {
-      const response = await fetch("http://localhost:8080/api/channels", {
+      const response = await fetch("/api/channels", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -208,6 +208,9 @@ func NewApp(userService *user.Service, chatService *chat.Service, q *queue.Queue
 	app.E.GET("/api/channels", app.GetChannelsHandler, jwtCheck())
 	app.E.POST("/api/channels", app.CreateChannelHandler, jwtCheck())
 	app.E.GET("/ws/:channel", app.handleWebSocket, jwtCheck())
+	app.E.GET("/health", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
 
 	// Set up Frontend routes
 	var contentHandler = echo.WrapHandler(http.FileServer(http.FS(frontendFS)))

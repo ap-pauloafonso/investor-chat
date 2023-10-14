@@ -37,8 +37,8 @@ services:
       rabbitmq:
         condition: service_healthy
   server:
-    ports:
-      - "8080:8080"
+#    ports:
+#      - "8080:8080"
     build:
       context: .
       dockerfile: ./cmd/server/Dockerfile
@@ -47,6 +47,36 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://server:8080/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  server2:
+#    ports:
+#      - "8080:8080"
+    build:
+      context: .
+      dockerfile: ./cmd/server/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://server2:8080/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  haproxy:
+    image: haproxy:2.4
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
 networks:
   default:
     driver: bridge

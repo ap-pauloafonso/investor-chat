@@ -69,7 +69,7 @@ func (q *Queue) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
 
 			return rabbitmq.Ack
 		},
-		"botresponse-q",
+		"",
 		rabbitmq.WithConsumerOptionsRoutingKey(commandResponseRoutingKey),
 		rabbitmq.WithConsumerOptionsExchangeName(exchangeName),
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
