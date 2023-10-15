@@ -2,6 +2,8 @@
 
 build: frontend backend
 
+docker-run:
+	docker-compose up
 run: frontend
 	go run cmd/server/main.go
 
@@ -19,3 +21,4 @@ docker-stop:
 
 install-front:
 	npm install --prefix frontend/
+

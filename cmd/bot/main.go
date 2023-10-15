@@ -13,7 +13,6 @@ import (
 func main() {
 
 	c := make(chan os.Signal, 1)
-	// Notify the channel on SIGINT (Ctrl+C) and SIGTERM (termination signal)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 
 	q, err := queue.NewQueue()
