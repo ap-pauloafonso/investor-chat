@@ -1,6 +1,6 @@
 import React from "react";
 
-const Message = ({ username, message, isSender, isBot }) => {
+const Message = ({ username, message, isSender, isBot,time }) => {
   return (
     <>
       {isBot ? (
@@ -21,14 +21,29 @@ const Message = ({ username, message, isSender, isBot }) => {
       ) : isSender ? (
         <div className="flex items-center justify-end">
           <div className="flex flex-col bg-blue-500 rounded-lg p-2">
-            <p className="text-white">{message}</p>
+            <div className="text-white">{message}</div>
+            <div className={"text-white text-right text-sm"}>{new Date(time)?.toLocaleString('en-US', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}</div>
           </div>
         </div>
       ) : (
         <div className="flex items-center justify-start">
-          <div className="flex gap-1 bg-gray-200 rounded-lg p-2">
-            <strong>{username}:</strong>
-            <p className="text-gray-800">{message}</p>
+          <div className="flex flex-col gap-1 bg-gray-200 rounded-lg p-2">
+           <span> <strong>{username}:</strong><span className="text-gray-800">{message}</span></span>
+            <p className={"text-right text-sm"}>{new Date(time)?.toLocaleString('en-US', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            })}</p>
           </div>
         </div>
       )}

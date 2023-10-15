@@ -132,9 +132,10 @@ type payload struct {
 	Username string
 	Msg      string
 	IsBot    bool
+	Time     time.Time
 }
 
-func broadcastMessage(username, channel, msg string, isBoot bool) error {
+func broadcastMessage(username, channel, msg string, isBoot bool, t time.Time) error {
 	channelUsers, okChannel := channelConnections.channels[channel]
 	if !okChannel {
 		return errors.New("channel not found")
@@ -145,6 +146,7 @@ func broadcastMessage(username, channel, msg string, isBoot bool) error {
 			Username: username,
 			Msg:      msg,
 			IsBot:    isBoot,
+			Time:     t,
 		})
 		if err != nil {
 			return err
@@ -179,6 +181,7 @@ func broadcastRecentMessages(channel, username string, msgs []chat.Message) erro
 			Username: m.User,
 			Msg:      m.Text,
 			IsBot:    false,
+			Time:     m.Timestamp,
 		}
 	}
 

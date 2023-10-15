@@ -230,7 +230,7 @@ func NewApp(userService *user.Service, chatService *chat.Service, q *queue.Queue
 			return err
 		}
 
-		return broadcastMessage(obj.Username, obj.Channel, obj.Message, false)
+		return broadcastMessage(obj.Username, obj.Channel, obj.Message, false, obj.Time)
 
 	})
 	if err != nil {
@@ -252,7 +252,7 @@ func NewApp(userService *user.Service, chatService *chat.Service, q *queue.Queue
 			return err
 		}
 
-		return broadcastMessage("BOT", obj.Channel, obj.GeneratedMessage, true)
+		return broadcastMessage("BOT", obj.Channel, obj.GeneratedMessage, true, obj.Time)
 
 	})
 	if err != nil {

@@ -16,7 +16,6 @@ function Login() {
   }
 
   const handleLogin = async () => {
-    console.log(JSON.stringify(loginUser));
     const response = await fetch("/api/login", {
       method: "POST",
       headers: {
@@ -57,7 +56,7 @@ function Login() {
     } else {
       const data = await response.json();
 
-      console.log();
+
       toast.error(data.errorMessage, {
         position: "top-right",
         autoClose: 5000, // Close after 5 seconds

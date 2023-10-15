@@ -14,6 +14,9 @@ const Chat = ({ userName, logoutFn }) => {
 
   const [selectedChannel, setSelectedChannel] = useState("default");
 
+  const [isDisconnected, setIsDisconnected] = useState(false);
+
+
   const el = useRef(null);
 
   function scrollToBottom() {
@@ -25,6 +28,7 @@ const Chat = ({ userName, logoutFn }) => {
       socket.close();
     }
 
+    console.log("connecting....")
 
     var loc = window.location, new_uri;
     if (loc.protocol === "https:") {
@@ -38,6 +42,7 @@ const Chat = ({ userName, logoutFn }) => {
     setSocket(ws);
 
     ws.onopen = () => {
+      setIsDisconnected(false)
       console.log("Connected to the WebSocket server");
     };
 
@@ -49,18 +54,22 @@ const Chat = ({ userName, logoutFn }) => {
         return;
       }
       const obj = JSON.parse(message);
+
       if (Array.isArray(obj)) {
+
         const mappedArray = obj.map((x) => ({
           msg: x.Msg,
           user: x.Username,
           isBot: x.IsBot,
+          time: x.Time
         }));
+
 
         setMessages(mappedArray);
       } else {
         setMessages((prevMessages) => [
           ...prevMessages,
-          { msg: obj.Msg, user: obj.Username, isBot: obj.IsBot },
+          { msg: obj.Msg, user: obj.Username, isBot: obj.IsBot , time: obj.Time},
         ]);
       }
 
@@ -71,6 +80,8 @@ const Chat = ({ userName, logoutFn }) => {
       if (event.wasClean) {
         return; // no need for reconnection
       }
+
+      setIsDisconnected(true)
       console.log("attempting to reconnect in 2s...");
       setTimeout(connectWebSocket, 2000);
     };
@@ -97,7 +108,7 @@ const Chat = ({ userName, logoutFn }) => {
   }, [selectedChannel]);
 
   const sendMessage = () => {
-    if (newMessage.trim() === "") {
+    if (newMessage.trim() === "" || isDisconnected) {
       return;
     }
 
@@ -114,7 +125,7 @@ const Chat = ({ userName, logoutFn }) => {
 
   // Function to create a new channel
   const createChannel = async () => {
-    if (newChannel.trim() !== "") {
+    if (newChannel.trim() !== "" || isDisconnected) {
       const response = await fetch("/api/channels", {
         method: "POST",
         headers: {
@@ -148,7 +159,7 @@ const Chat = ({ userName, logoutFn }) => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 gap-3">
+    <div className="flex flex-col h-screen bg-gray-100">
       <nav className="bg-blue-500 py-3">
         <div className="container  mx-auto flex justify-between items-center">
           <div className="navbar-left">Chat</div>
@@ -166,7 +177,16 @@ const Chat = ({ userName, logoutFn }) => {
         </div>
       </nav>
 
-      <div className="flex container">
+
+      {isDisconnected && (
+          <div className="bg-red-600 text-white py-2 text-center">
+            Disconnected. Reconnecting...
+          </div>
+      )}
+
+
+
+      <div className="flex container mt-3">
         {/* First Column: List of Channels with Add Channel Option (30%) */}
         <div className="flex flex-col min-w-[20%] p-4">
           <h2 className="text-xl font-bold mb-4">Channels</h2>
@@ -204,10 +224,12 @@ const Chat = ({ userName, logoutFn }) => {
               onChange={(e) => setNewChannel(e.target.value)}
               placeholder="New Channel Name"
               className="w-full p-2 rounded-full border border-gray-300 focus:outline-none"
+              disabled={isDisconnected}
             />
             <button
-              onClick={createChannel}
-              className="absolute px-4 right-0 top-0 h-10 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition duration-200"
+                onClick={createChannel}
+                className={clsx("absolute px-4 right-0 top-0 h-10 bg-blue-500 text-white p-2 rounded-full hover-bg-blue-600 transition duration-200",isDisconnected && "opacity-50")}
+                disabled={isDisconnected}
             >
               Add
             </button>
@@ -230,6 +252,7 @@ const Chat = ({ userName, logoutFn }) => {
                   isSender={message.user === userName}
                   message={message.msg}
                   isBot={message.isBot}
+                  time={message.time}
                 />
               ))}
               <div id={"el"} ref={el}></div>
@@ -237,15 +260,17 @@ const Chat = ({ userName, logoutFn }) => {
           </div>
           <div className="mb-4 relative">
             <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message"
-              className="w-full p-2 rounded-full border border-gray-300 focus:outline-none"
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message"
+                className="w-full p-2 rounded-full border border-gray-300 focus:outline-none"
+                disabled={isDisconnected}
             />
             <button
-              onClick={sendMessage}
-              className="absolute px-4 right-0 top-0 h-10 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition duration-200"
+                onClick={sendMessage}
+                className={clsx("absolute px-4 right-0 top-0 h-10 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition duration-200",isDisconnected && "opacity-50")}
+                disabled={isDisconnected}
             >
               Send
             </button>
