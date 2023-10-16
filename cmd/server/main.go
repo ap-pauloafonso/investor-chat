@@ -2,22 +2,41 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/jackc/pgx/v4/pgxpool"
 	_ "github.com/lib/pq"
-	"investorchat/app"
+	"github.com/lmittmann/tint"
 	"investorchat/chat"
-	assets "investorchat/frontend"
+	"investorchat/frontend"
 	"investorchat/queue"
+	"investorchat/server"
 	"investorchat/storage"
 	"investorchat/user"
-	"log"
+	"investorchat/utils"
+	"investorchat/websocket"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+)
+
+var (
+	dbConnection = "host=postgres port=5432 user=postgres password=test dbname=MY_DB sslmode=disable"
+	serverPort   = 8080
 )
 
 func main() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
+
+	slog.Info("starting the server")
+
 	// Initialize the database connection pool
-	db, err := pgxpool.Connect(context.Background(), getDatabaseDSN())
+	db, err := pgxpool.Connect(context.Background(), dbConnection)
 	if err != nil {
-		log.Fatal(err)
+		utils.LogErrorFatal(err)
 	}
 
 	// Close the database connection pool when the application exits
@@ -32,26 +51,36 @@ func main() {
 	// Create the repository for chat storage
 	chatRepository := storage.NewChatRepository(db)
 
-	// Create the chat service
-	chatService := chat.NewService(chatRepository)
-
 	queue, err := queue.NewQueue()
 	if err != nil {
-		log.Fatal(err)
+		utils.LogErrorFatal(err)
 	}
 	defer queue.Close()
 
+	// create socker handler server
+	wserver := websocket.NewWebSocketHandler(queue)
+	chatService := chat.NewService(chatRepository, queue, wserver)
+	wserver.OnConnection(chatService.UserConnected)
+	wserver.PrintOnlineUsers()
 	// Create the application instance
-	chatApp := app.NewApp(&userService, &chatService, queue, assets.FrontendFS)
+	server := server.NewApp(&userService, &chatService, queue, frontend.FS, wserver)
 
 	// Start the server
-	port := "8080"
-	err = chatApp.E.Start(":" + port)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
-func getDatabaseDSN() string {
-	return "host=postgres port=5432 user=postgres password=test dbname=MY_DB sslmode=disable"
+	go func() {
+		if err := server.E.Start(fmt.Sprintf(":%d", serverPort)); err != nil {
+			utils.LogErrorFatal(err)
+		}
+	}()
+
+	// Wait for a signal to exit
+	sig := <-c
+
+	// Shutdown the server gracefully
+	if err := server.E.Shutdown(context.Background()); err != nil {
+		utils.LogErrorFatal(err)
+	}
+
+	slog.Info("Received signal, Server shut down gracefully", sig)
+
 }

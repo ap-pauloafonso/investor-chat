@@ -25,7 +25,7 @@ func (r *UserRepository) SaveUser(username, password string) error {
 	return nil
 }
 
-func (r *UserRepository) GetUser(username string) (*user.UserModel, error) {
+func (r *UserRepository) GetUser(username string) (*user.Model, error) {
 	var storedPassword string
 	err := r.db.QueryRow(context.Background(), "SELECT password FROM users WHERE username = $1", username).Scan(&storedPassword)
 	if err != nil {
@@ -35,7 +35,7 @@ func (r *UserRepository) GetUser(username string) (*user.UserModel, error) {
 		return nil, fmt.Errorf("error fetching user: %w", err)
 	}
 
-	return &user.UserModel{
+	return &user.Model{
 		Username: username,
 		Password: storedPassword,
 	}, nil

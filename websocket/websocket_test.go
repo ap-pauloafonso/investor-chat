@@ -1,8 +1,6 @@
-package app
+package websocket
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestCheckBot(t *testing.T) {
 	testCases := []struct {

@@ -4,4 +4,5 @@
 ![Diagram](media/diagram.png)
 
 * run with `docker-compose up --build`
-* description soon...
+* go to http://localhost
+* description soon ...

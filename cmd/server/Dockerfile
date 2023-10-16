@@ -1,5 +1,5 @@
 # Use a minimal Alpine Linux-based image as the base image
-FROM golang:1.20-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install npm and other required packages
 RUN apk --no-cache add npm

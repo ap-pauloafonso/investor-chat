@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"investorchat/app"
 	"investorchat/queue"
 	"net/http"
 	"strings"
 )
+
+var errInvalidCsvFormat = errors.New("invalid CSV data format")
 
 type Bot struct {
 	q *queue.Queue
@@ -19,9 +20,9 @@ func NewBot(q *queue.Queue) *Bot {
 	return &Bot{q: q}
 }
 
-func (b *Bot) Process() {
-	b.q.ConsumeBotCommandRequest(func(payload []byte) error {
-		var obj app.BotCommandRequest
+func (b *Bot) Process() error {
+	err := b.q.ConsumeBotCommandRequest(func(payload []byte) error {
+		var obj queue.BotCommandRequest
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {
 			return err
@@ -32,7 +33,7 @@ func (b *Bot) Process() {
 			return err
 		}
 
-		var result app.BotCommandResponse
+		var result queue.BotCommandResponse
 
 		result.GeneratedMessage = message
 		result.Channel = obj.Channel
@@ -43,11 +44,20 @@ func (b *Bot) Process() {
 			return err
 		}
 
-		b.q.PublishBotCommandResponse(string(marshal))
+		err = b.q.PublishBotCommandResponse(string(marshal))
+		if err != nil {
+			return err
+		}
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("error while processing bot: %w", err)
+	}
+
+	return nil
 }
+
 func GetStockMessage(stockCode string) (string, error) {
 	url := fmt.Sprintf("https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv", stockCode)
 
@@ -59,14 +69,18 @@ func GetStockMessage(stockCode string) (string, error) {
 	defer response.Body.Close()
 
 	reader := csv.NewReader(response.Body)
-	reader.Read() // discard first line
+
+	_, err = reader.Read() // discard first line
+	if err != nil {
+		return "", err
+	}
 	record, err := reader.Read()
 	if err != nil {
 		return "", err
 	}
 
 	if len(record) < 7 {
-		return "", fmt.Errorf("Invalid CSV data format")
+		return "", errInvalidCsvFormat
 	}
 
 	stockName := strings.TrimSpace(record[0])

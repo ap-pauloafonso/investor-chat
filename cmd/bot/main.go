@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"github.com/lmittmann/tint"
 	"investorchat/bot"
 	"investorchat/queue"
-	"log"
+	"investorchat/utils"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,20 +16,25 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
+
+	slog.Info("starting the bot")
+
 	q, err := queue.NewQueue()
 	if err != nil {
-		log.Fatal(err)
+		utils.LogErrorFatal(err)
 	}
 	defer q.Close()
 
 	// start processing
-	bot.NewBot(q).Process()
+	err = bot.NewBot(q).Process()
+	if err != nil {
+		utils.LogErrorFatal(err)
+	}
 
 	// Block until a signal is received
 	sig := <-c
-	fmt.Printf("Received signal: %v\n", sig)
 
-	// Exit the program
-	os.Exit(0)
+	slog.Info("Received signal, Server shut down gracefully", sig)
 
 }

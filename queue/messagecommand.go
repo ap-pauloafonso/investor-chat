@@ -1,6 +1,9 @@
 package queue
 
-import "github.com/wagslane/go-rabbitmq"
+import (
+	"fmt"
+	"github.com/wagslane/go-rabbitmq"
+)
 
 const messageRoutingKey = "message-command"
 
@@ -12,7 +15,7 @@ func (q *Queue) PublishUserMessageCommand(msg string) error {
 		rabbitmq.WithPublishOptionsExchange(exchangeName),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error publishing message-command: %w", err)
 	}
 
 	return nil

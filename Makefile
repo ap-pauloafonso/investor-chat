@@ -4,6 +4,9 @@ build: frontend backend
 
 docker-run:
 	docker-compose up
+
+docker-run-build:
+	docker-compose up --build
 run: frontend
 	go run cmd/server/main.go
 
@@ -22,3 +25,5 @@ docker-stop:
 install-front:
 	npm install --prefix frontend/
 
+lint:
+	golangci-lint run ./...

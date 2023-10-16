@@ -1,0 +1,8 @@
+linters:
+  enable:
+    - ireturn
+    - revive
+    - gosec
+    - errcheck
+    - nilnil
+    - nilerr

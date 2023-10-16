@@ -37,8 +37,6 @@ services:
       rabbitmq:
         condition: service_healthy
   server:
-#    ports:
-#      - "8080:8080"
     build:
       context: .
       dockerfile: ./cmd/server/Dockerfile
@@ -53,8 +51,6 @@ services:
       timeout: 5s
       retries: 3
   server2:
-#    ports:
-#      - "8080:8080"
     build:
       context: .
       dockerfile: ./cmd/server/Dockerfile

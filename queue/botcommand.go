@@ -1,10 +1,26 @@
 package queue
 
-import "github.com/wagslane/go-rabbitmq"
+import (
+	"fmt"
+	"github.com/wagslane/go-rabbitmq"
+	"time"
+)
 
 const commandRequestRoutingKey = "botrequest-command"
 
 const commandResponseRoutingKey = "botresponse-command"
+
+type BotCommandRequest struct {
+	Command string
+	Channel string
+	Time    time.Time
+}
+
+type BotCommandResponse struct {
+	GeneratedMessage string
+	Channel          string
+	Time             time.Time
+}
 
 func (q *Queue) PublishBotCommandRequest(msg string) error {
 	err := q.publisher.Publish(
@@ -14,11 +30,11 @@ func (q *Queue) PublishBotCommandRequest(msg string) error {
 		rabbitmq.WithPublishOptionsExchange(exchangeName),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error publishing botrequest-command: %w", err)
 	}
-
 	return nil
 }
+
 func (q *Queue) PublishBotCommandResponse(msg string) error {
 	err := q.publisher.Publish(
 		[]byte(msg),
@@ -27,9 +43,8 @@ func (q *Queue) PublishBotCommandResponse(msg string) error {
 		rabbitmq.WithPublishOptionsExchange(exchangeName),
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error publishing botresponse-command: %w", err)
 	}
-
 	return nil
 }
 
@@ -41,7 +56,6 @@ func (q *Queue) ConsumeBotCommandRequest(fn func(payload []byte) error) error {
 			if err != nil {
 				return rabbitmq.NackRequeue
 			}
-
 			return rabbitmq.Ack
 		},
 		"botrequest-q",
@@ -50,11 +64,9 @@ func (q *Queue) ConsumeBotCommandRequest(fn func(payload []byte) error) error {
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error in ConsumeBotCommandRequest: %w", err)
 	}
-
 	q.consumers = append(q.consumers, consumer)
-
 	return nil
 }
 
@@ -66,7 +78,6 @@ func (q *Queue) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
 			if err != nil {
 				return rabbitmq.NackRequeue
 			}
-
 			return rabbitmq.Ack
 		},
 		"",
@@ -75,10 +86,8 @@ func (q *Queue) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
 		rabbitmq.WithConsumerOptionsExchangeDeclare,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error in ConsumeBotCommandResponse: %w", err)
 	}
-
 	q.consumers = append(q.consumers, consumer)
-
 	return nil
 }

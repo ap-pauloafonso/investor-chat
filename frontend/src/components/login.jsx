@@ -56,7 +56,6 @@ function Login() {
     } else {
       const data = await response.json();
 
-
       toast.error(data.errorMessage, {
         position: "top-right",
         autoClose: 5000, // Close after 5 seconds
@@ -79,7 +78,7 @@ function Login() {
                   onChange={(e) => handleOnChangeLogin(e)}
                   name={"username"}
                   class="form-input mt-3 w-full py-2 px-3 h-10 bg-transparent dark:bg-slate-900 dark:text-slate-200 rounded outline-none border border-gray-200 focus:border-indigo-600 dark:border-gray-800 dark:focus:border-indigo-600 focus:ring-0"
-                  placeholder="name@example.com"
+                  placeholder="Username"
                 />
               </div>
 
@@ -118,7 +117,7 @@ function Login() {
                   onChange={(e) => handleOnChangeSignup(e)}
                   name={"username"}
                   className="form-input mt-3 w-full py-2 px-3 h-10 bg-transparent dark:bg-slate-900 dark:text-slate-200 rounded outline-none border border-gray-200 focus:border-indigo-600 dark:border-gray-800 dark:focus:border-indigo-600 focus:ring-0"
-                  placeholder="name@example.com"
+                  placeholder="Username"
                 />
               </div>
 
