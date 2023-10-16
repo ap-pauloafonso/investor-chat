@@ -1,7 +1,7 @@
 # investor-chat
 
-## Demo
-https://github.com/ap-pauloafonso/investor-chat/assets/26802978/0d7bc8d2-2d6b-4115-ac40-16c7853bdce6
+https://github.com/ap-pauloafonso/investor-chat/assets/26802978/f3de8351-894e-42c3-9a7f-e1e43dfd3d19
+
 
 
 ![Diagram](media/diagram.png)
