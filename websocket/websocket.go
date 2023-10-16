@@ -17,8 +17,7 @@ import (
 )
 
 var (
-	errConnectionNotFound = errors.New("user websocket connection not found")
-	errChannelNotFound    = errors.New("channel not found")
+	errChannelNotFound = errors.New("channel not found")
 )
 
 type ChannelUserConnections struct {

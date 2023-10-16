@@ -10,7 +10,10 @@ import (
 	"strings"
 )
 
-var errInvalidCsvFormat = errors.New("invalid CSV data format")
+var (
+	errInvalidCsvFormat = errors.New("invalid CSV data format")
+	errInvalidStockCode = errors.New("invalid stock code")
+)
 
 type Bot struct {
 	q *queue.Queue
@@ -21,6 +24,7 @@ func NewBot(q *queue.Queue) *Bot {
 }
 
 func (b *Bot) Process() error {
+	const stockURL = "https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv"
 	err := b.q.ConsumeBotCommandRequest(func(payload []byte) error {
 		var obj queue.BotCommandRequest
 		err := json.Unmarshal(payload, &obj)
@@ -28,7 +32,7 @@ func (b *Bot) Process() error {
 			return err
 		}
 
-		message, err := GetStockMessage(obj.Command)
+		message, err := GetStockMessage(stockURL, obj.Command)
 		if err != nil {
 			return err
 		}
@@ -58,25 +62,23 @@ func (b *Bot) Process() error {
 	return nil
 }
 
-func GetStockMessage(stockCode string) (string, error) {
-	url := fmt.Sprintf("https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv", stockCode)
+func GetStockMessage(url, stockCode string) (string, error) {
+	urlParsed := fmt.Sprintf(url, stockCode)
 
-	response, err := http.Get(url)
+	response, err := http.Get(urlParsed)
 	if err != nil {
 		return "", err
 	}
-
-	defer response.Body.Close()
 
 	reader := csv.NewReader(response.Body)
 
 	_, err = reader.Read() // discard first line
 	if err != nil {
-		return "", err
+		return "", errInvalidCsvFormat
 	}
 	record, err := reader.Read()
 	if err != nil {
-		return "", err
+		return "", errInvalidCsvFormat
 	}
 
 	if len(record) < 7 {
@@ -89,7 +91,7 @@ func GetStockMessage(stockCode string) (string, error) {
 	message := fmt.Sprintf("%s quote is $%s per share", stockName, stockQuote)
 
 	if stockQuote == "N/D" {
-		return "", errors.New("invalid stock code")
+		return "", errInvalidStockCode
 	}
 
 	return message, nil
