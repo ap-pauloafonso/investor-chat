@@ -1,8 +1,8 @@
-package chat
+package channel
 
 import (
 	"errors"
-	"reflect"
+	"investorchat/user"
 	"testing"
 	"time"
 )
@@ -13,7 +13,7 @@ type mockRepository struct {
 	recentMessagesErr error
 	channels          []string
 	channelData       map[string]string
-	recentMsgs        map[string][]Message
+	recentMsgs        map[string][]user.Message
 	savedChannel      string
 	errToReturn       error
 }
@@ -31,23 +31,23 @@ func (m *mockRepository) GetChannel(name string) (string, error) {
 	return m.channelData[name], m.getChannelErr
 }
 
-func (m *mockRepository) SaveMessage(channel, user, msg string, timestamp time.Time) error {
+func (m *mockRepository) SaveMessage(channel, u, msg string, timestamp time.Time) error {
 	if m.recentMsgs == nil {
-		m.recentMsgs = map[string][]Message{}
+		m.recentMsgs = map[string][]user.Message{}
 	}
 	if m.recentMsgs[channel] == nil {
-		m.recentMsgs[channel] = []Message{}
+		m.recentMsgs[channel] = []user.Message{}
 	}
-	m.recentMsgs[channel] = append(m.recentMsgs[channel], Message{
+	m.recentMsgs[channel] = append(m.recentMsgs[channel], user.Message{
 		Channel:   channel,
-		User:      user,
+		User:      u,
 		Text:      msg,
 		Timestamp: timestamp,
 	})
 	return m.errToReturn
 }
 
-func (m *mockRepository) GetRecentMessages(channel string, maxMessages int) ([]Message, error) {
+func (m *mockRepository) GetRecentMessages(channel string, maxMessages int) ([]user.Message, error) {
 	if len(m.recentMsgs[channel]) > maxMessages {
 		return m.recentMsgs[channel][len(m.recentMsgs[channel])-maxMessages:], m.errToReturn
 	}
@@ -65,16 +65,29 @@ func (m *mockQueue) PublishUpdateChannelsCommand() error {
 type mockWebSocket struct {
 	addedChannel string
 	sendErr      error
-	msgSent      []Message
+	msgSent      []user.Message
 }
 
 func (m *mockWebSocket) AddNewChannel(channel string) {
 	m.addedChannel = channel
 }
 
-func (m *mockWebSocket) SendRecentMessages(channel, user string, msgs []Message) error {
+func (m *mockWebSocket) SendRecentMessages(channel, user string, msgs []user.Message) error {
 	m.msgSent = msgs
 	return m.sendErr
+}
+
+type archiveMock struct {
+	err      error
+	messages []user.Message
+}
+
+func (a *archiveMock) SaveMessage(channel, user, msg string, timestamp time.Time) error {
+	return a.err
+}
+
+func (a *archiveMock) GetRecentMessages(channel string) ([]user.Message, error) {
+	return a.messages, a.err
 }
 
 func TestCreateChannel(t *testing.T) {
@@ -167,130 +180,6 @@ func TestCreateChannel(t *testing.T) {
 		err := service.CreateChannel("newChannel")
 		if err != queue.errToReturn {
 			t.Errorf("Expected %v, got %v", queue.errToReturn, err)
-		}
-	})
-}
-
-func TestUserConnected(t *testing.T) {
-
-	t.Run("User Connected Successfully", func(t *testing.T) {
-		repo := &mockRepository{}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		repo.recentMsgs = map[string][]Message{
-			"channel1": {
-				{Channel: "channel1", User: "user1", Text: "Hello", Timestamp: time.Now()},
-				{Channel: "channel1", User: "user2", Text: "Hi", Timestamp: time.Now()},
-			},
-		}
-
-		service.UserConnected("channel1", "user1")
-		if !reflect.DeepEqual(ws.msgSent, repo.recentMsgs["channel1"]) {
-			t.Errorf("Expected 'channel1' to be added to WebSocket, got %v", ws.addedChannel)
-		}
-	})
-
-	t.Run("Error getting Recent Messages", func(t *testing.T) {
-
-		repo := &mockRepository{recentMessagesErr: errors.New("failed to get list of")}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		repo.recentMsgs = map[string][]Message{
-			"channel1": {
-				{Channel: "channel1", User: "user1", Text: "Hello", Timestamp: time.Now()},
-				{Channel: "channel1", User: "user2", Text: "Hi", Timestamp: time.Now()},
-			},
-		}
-
-		ws.sendErr = errors.New("mock websocket error")
-
-		service.UserConnected("channel1", "user1")
-		if ws.msgSent != nil {
-			t.Errorf("expected msgSent to be nil, since no msg were sent")
-		}
-	})
-
-}
-
-func TestSaveMessage(t *testing.T) {
-
-	t.Run("Save Message Successfully", func(t *testing.T) {
-		repo := &mockRepository{}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		timestamp := time.Now()
-		err := service.SaveMessage("channel1", "user1", "Hello", timestamp)
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-	})
-
-	t.Run("Error Saving Message", func(t *testing.T) {
-
-		repo := &mockRepository{}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		repo.errToReturn = errors.New("mock repository error")
-		timestamp := time.Now()
-		err := service.SaveMessage("channel1", "user1", "Hello", timestamp)
-		if err != repo.errToReturn {
-			t.Errorf("Expected %v, got %v", repo.errToReturn, err)
-		}
-	})
-}
-
-func TestGetRecentMessages(t *testing.T) {
-
-	t.Run("Get Recent Messages Successfully", func(t *testing.T) {
-		repo := &mockRepository{}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		repo.recentMsgs = map[string][]Message{
-			"channel1": {
-				{Channel: "channel1", User: "user1", Text: "Hello", Timestamp: time.Now()},
-				{Channel: "channel1", User: "user2", Text: "Hi", Timestamp: time.Now()},
-			},
-		}
-
-		messages, err := service.GetRecentMessages("channel1")
-		if err != nil {
-			t.Errorf("Expected no error, got %v", err)
-		}
-		if len(messages) != 2 {
-			t.Errorf("Expected 2 messages, got %v", len(messages))
-		}
-	})
-
-	t.Run("Error Getting Recent Messages", func(t *testing.T) {
-		errStore := errors.New("some error")
-		repo := &mockRepository{recentMessagesErr: errStore}
-		queue := &mockQueue{}
-		ws := &mockWebSocket{}
-
-		service := NewService(repo, queue, ws)
-
-		repo.errToReturn = errors.New("mock repository error")
-		messages, err := service.GetRecentMessages("channel1")
-		if err != errStore {
-			t.Errorf("Expected %v, got %v", repo.errToReturn, err)
-		}
-		if len(messages) != 0 {
-			t.Errorf("Expected 0 messages, got %v", len(messages))
 		}
 	})
 }

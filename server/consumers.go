@@ -25,7 +25,7 @@ func (s *Server) initConsumers() {
 
 	err = s.q.ConsumeUpdateChannelsCommand(func(payload []byte) error {
 		// get all the channelConnections
-		channels, err := s.chatService.GetAllChannels()
+		channels, err := s.channelService.GetAllChannels()
 		if err != nil {
 			return err
 		}
@@ -51,21 +51,4 @@ func (s *Server) initConsumers() {
 		utils.LogErrorFatal(err)
 	}
 
-	err = s.q.ConsumeUserMessageCommandForStorage(func(payload []byte) error {
-		var obj websocket.MessageObj
-		err := json.Unmarshal(payload, &obj)
-		if err != nil {
-			return err
-		}
-
-		err = s.chatService.SaveMessage(obj.Channel, obj.Username, obj.Message, obj.Time)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		utils.LogErrorFatal(err)
-	}
 }

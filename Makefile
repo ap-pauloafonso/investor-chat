@@ -1,20 +1,7 @@
-.PHONY: frontend
-
-build: frontend backend
+.PHONY: proto
 
 docker-run:
-	docker-compose up
-
-docker-run-build:
 	docker-compose up --build
-run: frontend
-	go run cmd/server/main.go
-
-frontend:
-	npm run build --prefix frontend/
-
-backend:
-	go build -o out/web .
 
 docker-start:
 	docker-compose up -d
@@ -30,3 +17,11 @@ lint:
 
 test:
 	go test ./... -count=1 --cover
+
+
+proto:
+	rm -f pb/*.go
+	protoc --proto_path=proto \
+      --go_out=pb --go_opt=paths=source_relative \
+      --go-grpc_out=pb --go-grpc_opt=paths=source_relative \
+      proto/*.proto

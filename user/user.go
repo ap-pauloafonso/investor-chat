@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 
 var (
@@ -18,8 +19,15 @@ type Service struct {
 	r Repository
 }
 
-func NewService(userRepository Repository) Service {
-	return Service{userRepository}
+type Message struct {
+	Channel   string    `json:"channel"`
+	User      string    `json:"user"`
+	Text      string    `json:"text"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func NewService(userRepository Repository) *Service {
+	return &Service{userRepository}
 }
 
 type Model struct {

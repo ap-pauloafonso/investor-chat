@@ -1,0 +1,31 @@
+// archive.proto
+
+syntax = "proto3";
+
+
+package pb;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/ap-pauloafonso/investor-chat/pb";
+
+
+service ArchiveService {
+  rpc GetRecentMessages (GetRecentMessagesRequest) returns (GetRecentMessagesResponse);
+}
+
+message Message {
+  string channel = 1;
+  string user = 2;
+  string text = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message GetRecentMessagesRequest {
+  string channel = 1;
+  int32 max_messages = 2;
+}
+
+message GetRecentMessagesResponse {
+  repeated Message messages = 1;
+}

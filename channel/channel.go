@@ -1,10 +1,9 @@
-package chat
+package channel
 
 import (
 	"errors"
-	"log/slog"
+	"investorchat/user"
 	"regexp"
-	"time"
 )
 
 var (
@@ -20,23 +19,18 @@ type Service struct {
 	websocket WebSocket
 }
 
-func NewService(chatRepository Repository, q Queue, w WebSocket) Service {
-	return Service{chatRepository, q, w}
+func NewService(chatRepository Repository, q Queue, w WebSocket) *Service {
+	return &Service{chatRepository, q, w}
 }
 
 type Repository interface {
 	GetChannels() ([]string, error)
 	SaveChannel(name string) error
 	GetChannel(name string) (string, error)
-	SaveMessage(channel, user, msg string, timestamp time.Time) error
-	GetRecentMessages(channel string, maxMessages int) ([]Message, error)
 }
 
-type Message struct {
-	Channel   string    `json:"channel"`
-	User      string    `json:"user"`
-	Text      string    `json:"text"`
-	Timestamp time.Time `json:"timestamp"`
+type ArchiveServer interface {
+	GetRecentMessages(channel string) ([]user.Message, error)
 }
 
 func (s *Service) GetAllChannels() ([]string, error) {
@@ -49,7 +43,7 @@ type Queue interface {
 
 type WebSocket interface {
 	AddNewChannel(channel string)
-	SendRecentMessages(channel, user string, msgs []Message) error
+	SendRecentMessages(channel, user string, msgs []user.Message) error
 }
 
 var validChannelRegex = regexp.MustCompile("^[a-zA-Z0-9]+$")
@@ -88,28 +82,4 @@ func (s *Service) CreateChannel(name string) error {
 	s.websocket.AddNewChannel(name)
 
 	return nil
-}
-
-func (s *Service) UserConnected(channel, user string) {
-	// send recent messages
-	messages, err := s.GetRecentMessages(channel)
-	if err != nil {
-		slog.Error("error sending recent messages", err)
-		return
-	}
-
-	err = s.websocket.SendRecentMessages(channel, user, messages)
-	if err != nil {
-		slog.Error(err.Error())
-	}
-
-}
-
-func (s *Service) SaveMessage(channel, user, message string, timestamp time.Time) error {
-	return s.r.SaveMessage(channel, user, message, timestamp)
-}
-
-func (s *Service) GetRecentMessages(channel string) ([]Message, error) {
-	const max = 50
-	return s.r.GetRecentMessages(channel, max)
 }

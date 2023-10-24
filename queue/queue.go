@@ -13,9 +13,9 @@ type Queue struct {
 const exchangeName = "events"
 const contentType = "application/json"
 
-func NewQueue() (*Queue, error) {
+func NewQueue(rabbitmqUrl string) (*Queue, error) {
 
-	rmq, err := rabbitmq.NewConn("amqp://admin:admin@rabbitmq", rabbitmq.WithConnectionOptionsLogging)
+	rmq, err := rabbitmq.NewConn(rabbitmqUrl, rabbitmq.WithConnectionOptionsLogging)
 
 	if err != nil {
 		return nil, err

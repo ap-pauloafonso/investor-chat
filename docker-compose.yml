@@ -30,16 +30,30 @@ services:
       timeout: 20s
       retries: 5
   bot:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: ./cmd/bot/Dockerfile
     depends_on:
       rabbitmq:
         condition: service_healthy
+  archiver:
+      env_file: .env
+      build:
+        context: .
+        dockerfile: ./cmd/archiver/Dockerfile
+      depends_on:
+        postgres:
+          condition: service_healthy
+        rabbitmq:
+          condition: service_healthy
   server:
+    env_file: .env
     build:
       context: .
       dockerfile: ./cmd/server/Dockerfile
+    image: investor-chat_server:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,9 +65,8 @@ services:
       timeout: 5s
       retries: 3
   server2:
-    build:
-      context: .
-      dockerfile: ./cmd/server/Dockerfile
+    env_file: .env
+    image: investor-chat_server:latest
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,6 +77,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
   haproxy:
     image: haproxy:2.4
     volumes:

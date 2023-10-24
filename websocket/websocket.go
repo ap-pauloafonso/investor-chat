@@ -1,16 +1,18 @@
 package websocket
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
-	"investorchat/chat"
+	"investorchat/pb"
 	"investorchat/queue"
+	"investorchat/user"
 	"investorchat/utils"
 	"log/slog"
 	"net/http"
+	"nhooyr.io/websocket"
 	"regexp"
 	"sync"
 	"time"
@@ -94,10 +96,9 @@ func (c *ChannelConnections) getChannelUsers(channel string) (*ChannelUserConnec
 }
 
 type WebSocketHandler struct {
+	archive            pb.ArchiveServiceClient
 	channelConnections ChannelConnections
-	upgrader           websocket.Upgrader
 	q                  *queue.Queue
-	onConnectionFn     func(channel, user string)
 }
 
 type MessageObj struct {
@@ -107,24 +108,15 @@ type MessageObj struct {
 	Time     time.Time
 }
 
-func NewWebSocketHandler(q *queue.Queue) *WebSocketHandler {
+func NewWebSocketHandler(q *queue.Queue, archive pb.ArchiveServiceClient) *WebSocketHandler {
 
 	channels := make(map[string]*ChannelUserConnections)
 
 	return &WebSocketHandler{
 		channelConnections: ChannelConnections{channels: channels},
-		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		},
-		q: q,
+		q:                  q,
+		archive:            archive,
 	}
-}
-
-// OnConnection accepts a function to be fired when the user connects
-func (w *WebSocketHandler) OnConnection(fn func(channel, user string)) {
-	w.onConnectionFn = fn
 }
 
 func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
@@ -143,7 +135,7 @@ func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
 
 	slog.Info("[user trying to connection]", "channel", channelParam, "user", u)
 
-	conn, err := w.upgrader.Upgrade(c.Response(), c.Request(), nil)
+	conn, err := websocket.Accept(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
 	}
@@ -154,16 +146,17 @@ func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
 
 	defer func() {
 
-		defer conn.Close()
+		defer conn.CloseNow()
 		w.channelConnections.removeUser(channelParam, u)
 		slog.Info("[user disconnected]", "channel", channelParam, "user", u)
 
 	}()
 
-	go w.onConnectionFn(channelParam, u)
+	go w.UserConnected(channelParam, u)
 
 	for {
-		_, p, err := conn.ReadMessage()
+
+		_, p, err := conn.Read(context.Background())
 		if err != nil {
 			return err
 		}
@@ -224,7 +217,7 @@ func (w *WebSocketHandler) BroadcastMessage(username, channel, msg string, isBoo
 			return err
 		}
 
-		err = userC.WriteMessage(websocket.TextMessage, jsonBytes)
+		err = userC.Write(context.Background(), websocket.MessageText, jsonBytes)
 		if err != nil {
 			slog.Error("error writing to user ws", err)
 		}
@@ -247,7 +240,7 @@ func (w *WebSocketHandler) HandleChannelsUpdate(channels []string) error {
 	// broadcast it to everyone connected in ws
 	for _, channeList := range w.channelConnections.channels {
 		for _, user := range channeList.users {
-			err := user.WriteMessage(websocket.TextMessage, []byte("[channel_list_update]"))
+			err := user.Write(context.Background(), websocket.MessageText, []byte("[channel_list_update]"))
 			if err != nil {
 				slog.Error("error writing [channel_list_update] to user", err)
 			}
@@ -277,7 +270,7 @@ func (w *WebSocketHandler) AddNewChannel(channel string) {
 	w.channelConnections.addChannel(channel)
 }
 
-func (w *WebSocketHandler) SendRecentMessages(channel, username string, msgs []chat.Message) error {
+func (w *WebSocketHandler) SendRecentMessages(channel, username string, msgs []user.Message) error {
 	channelUsers, okChannel := w.channelConnections.getChannelUsers(channel)
 	if !okChannel {
 		return errors.New("channel not found")
@@ -304,7 +297,7 @@ func (w *WebSocketHandler) SendRecentMessages(channel, username string, msgs []c
 		return fmt.Errorf("error encoding array for recent messages: %w", err)
 	}
 
-	err = userC.WriteMessage(websocket.TextMessage, marshal)
+	err = userC.Write(context.Background(), websocket.MessageText, marshal)
 	if err != nil {
 		return fmt.Errorf("ws: error writing recent messages to user : %w", err)
 	}
@@ -324,4 +317,34 @@ func checkBot(msg string) (bool, string) {
 	}
 
 	return false, ""
+}
+
+func (w *WebSocketHandler) UserConnected(channel, username string) {
+	// get recent messages using grpc
+	resp, err := w.archive.GetRecentMessages(context.Background(), &pb.GetRecentMessagesRequest{
+		Channel:     channel,
+		MaxMessages: 50,
+	})
+	if err != nil {
+		slog.Error("error sending recent messages", err)
+		return
+	}
+
+	// convert it back to our standard message object
+	r := make([]user.Message, len(resp.Messages))
+	for i := range resp.Messages {
+		item := resp.Messages[i]
+		r[i] = user.Message{
+			Channel:   item.Channel,
+			User:      item.User,
+			Text:      item.Text,
+			Timestamp: item.Timestamp.AsTime(),
+		}
+	}
+	// send it
+	err = w.SendRecentMessages(channel, username, r)
+	if err != nil {
+		slog.Error(err.Error())
+	}
+
 }

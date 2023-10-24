@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"investorchat/chat"
+	"investorchat/channel"
 	"investorchat/queue"
 	"investorchat/user"
 	"investorchat/utils"
@@ -23,7 +23,7 @@ var (
 type Server struct {
 	E                *echo.Echo
 	userService      *user.Service
-	chatService      *chat.Service
+	channelService   *channel.Service
 	q                *queue.Queue
 	webSocketHandler *websocket.WebSocketHandler
 }
@@ -106,7 +106,7 @@ func (s *Server) GetChannelsHandler(c echo.Context) error {
 		Channels []string `json:"channels"`
 	}
 
-	channels, err := s.chatService.GetAllChannels()
+	channels, err := s.channelService.GetAllChannels()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorMessage{ErrorMessage: "Internal Server Error"})
 	}
@@ -132,7 +132,7 @@ func (s *Server) CreateChannelHandler(c echo.Context) error {
 	}
 
 	// Call the service to create the channel
-	err := s.chatService.CreateChannel(req.Name)
+	err := s.channelService.CreateChannel(req.Name)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorMessage{ErrorMessage: err.Error()})
 	}
@@ -142,11 +142,11 @@ func (s *Server) CreateChannelHandler(c echo.Context) error {
 }
 
 // NewApp creates a new instance of the Server
-func NewApp(userService *user.Service, chatService *chat.Service, q *queue.Queue, frontendFS embed.FS, webSocketHandler *websocket.WebSocketHandler) *Server {
+func NewApp(userService *user.Service, channelService *channel.Service, q *queue.Queue, frontendFS embed.FS, webSocketHandler *websocket.WebSocketHandler) *Server {
 	server := &Server{
 		E:                echo.New(),
 		userService:      userService,
-		chatService:      chatService,
+		channelService:   channelService,
 		q:                q,
 		webSocketHandler: webSocketHandler,
 	}
@@ -188,6 +188,7 @@ func jwtCheck() echo.MiddlewareFunc {
 			}
 
 			token, err := jwt.Parse(tokenString.Value, func(token *jwt.Token) (interface{}, error) {
+
 				// Validate the signing method
 				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, fmt.Errorf("invalid signing method")
