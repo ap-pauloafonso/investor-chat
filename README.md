@@ -10,6 +10,7 @@ https://github.com/ap-pauloafonso/investor-chat/assets/26802978/f3de8351-894e-42
 * Multiple Channels(chatrooms)
 * Messages are archived in the database 
 * Chat-bot to get the current stock price: `/stock=[STOCK_CODE]` - example `/stock=aapl.us`
+  * It uses https://stooq.com stock API to get the current stock price (stock codes can be found at https://stooq.com/t/?i=518)
 
 ## Architecture 
 ![Diagram](media/diagram.png)
