@@ -3,9 +3,9 @@ package storage
 import (
 	"context"
 	"fmt"
+	"github.com/ap-pauloafonso/investor-chat/user"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"investorchat/user"
 )
 
 type UserRepository struct {

@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"github.com/ap-pauloafonso/investor-chat/bot"
+	"github.com/ap-pauloafonso/investor-chat/config"
+	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/lmittmann/tint"
 	"github.com/sethvargo/go-envconfig"
-	"investorchat/bot"
-	"investorchat/config"
-	"investorchat/queue"
-	"investorchat/utils"
 	"log/slog"
 	"os"
 	"os/signal"

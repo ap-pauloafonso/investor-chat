@@ -3,10 +3,10 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"github.com/ap-pauloafonso/investor-chat/pb"
 	"github.com/labstack/echo/v4"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"investorchat/pb"
 	"net/http/httptest"
 	"nhooyr.io/websocket"
 	"reflect"

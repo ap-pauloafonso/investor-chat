@@ -1,8 +1,8 @@
 package archive
 
 import (
-	"investorchat/queue"
-	"investorchat/user"
+	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/user"
 	"time"
 )
 

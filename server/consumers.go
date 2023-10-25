@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"investorchat/queue"
-	"investorchat/utils"
-	"investorchat/websocket"
+	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/utils"
+	"github.com/ap-pauloafonso/investor-chat/websocket"
 )
 
 func (s *Server) initConsumers() {

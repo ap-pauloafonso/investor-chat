@@ -2,8 +2,8 @@ package archive
 
 import (
 	"encoding/json"
-	"investorchat/utils"
-	"investorchat/websocket"
+	"github.com/ap-pauloafonso/investor-chat/utils"
+	"github.com/ap-pauloafonso/investor-chat/websocket"
 )
 
 func (s *Service) InitConsumer() {

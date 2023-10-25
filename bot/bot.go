@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"investorchat/queue"
+	"github.com/ap-pauloafonso/investor-chat/queue"
 	"net/http"
 	"strings"
 )

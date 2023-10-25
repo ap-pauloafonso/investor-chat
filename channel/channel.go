@@ -2,7 +2,7 @@ package channel
 
 import (
 	"errors"
-	"investorchat/user"
+	"github.com/ap-pauloafonso/investor-chat/user"
 	"regexp"
 )
 

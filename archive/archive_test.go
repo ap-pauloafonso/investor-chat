@@ -2,7 +2,7 @@ package archive
 
 import (
 	"errors"
-	"investorchat/user"
+	"github.com/ap-pauloafonso/investor-chat/user"
 	"testing"
 	"time"
 )
