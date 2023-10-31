@@ -13,12 +13,12 @@ type Repository interface {
 }
 
 type Service struct {
-	r Repository
-	q *eventbus.Eventbus
+	r        Repository
+	eventbus *eventbus.Eventbus
 }
 
-func NewService(r Repository, q *eventbus.Eventbus) *Service {
-	return &Service{r: r, q: q}
+func NewService(r Repository, eventbus *eventbus.Eventbus) *Service {
+	return &Service{r: r, eventbus: eventbus}
 }
 
 func (s *Service) SaveMessage(ctx context.Context, channel, user, message string, timestamp time.Time) error {

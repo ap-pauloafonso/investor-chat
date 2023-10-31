@@ -16,17 +16,17 @@ var (
 )
 
 type Bot struct {
-	q *eventbus.Eventbus
+	eventbus *eventbus.Eventbus
 }
 
-func NewBot(q *eventbus.Eventbus) *Bot {
-	return &Bot{q: q}
+func NewBot(eventbus *eventbus.Eventbus) *Bot {
+	return &Bot{eventbus: eventbus}
 }
 
 const stockURL = "https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv"
 
 func (b *Bot) Process() error {
-	err := b.q.ConsumeBotCommandRequest(func(payload []byte) error {
+	err := b.eventbus.ConsumeBotCommandRequest(func(payload []byte) error {
 		var obj eventbus.BotCommandRequest
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {
@@ -49,7 +49,7 @@ func (b *Bot) Process() error {
 			return err
 		}
 
-		err = b.q.PublishBotCommandResponse(string(marshal))
+		err = b.eventbus.PublishBotCommandResponse(string(marshal))
 		if err != nil {
 			return err
 		}

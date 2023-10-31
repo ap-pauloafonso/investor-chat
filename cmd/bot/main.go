@@ -15,8 +15,10 @@ import (
 )
 
 func main() {
-	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
 	ctx := context.Background()
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
+
+	//load cfg
 	var cfg config.GlobalConfig
 	if err := envconfig.Process(ctx, &cfg); err != nil {
 		utils.LogErrorFatal(err)
@@ -25,19 +27,22 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 
-	slog.Info("starting the bot")
+	slog.Info("starting the bot...")
 
-	q, err := eventbus.New(cfg.RabbitmqConnection)
+	//create event bus
+	eventbus, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
-	defer q.Close()
+	defer eventbus.Close()
 
 	// start processing
-	err = bot.NewBot(q).Process()
+	err = bot.NewBot(eventbus).Process()
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
+
+	slog.Info("bot started")
 
 	// Block until a signal is received
 	sig := <-c

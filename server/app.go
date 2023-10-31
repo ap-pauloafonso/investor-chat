@@ -25,7 +25,7 @@ type Server struct {
 	E                *echo.Echo
 	userService      *user.Service
 	channelService   *channel.Service
-	q                *eventbus.Eventbus
+	eventbus         *eventbus.Eventbus
 	webSocketHandler *websocket.Handler
 }
 
@@ -148,7 +148,7 @@ func NewApp(ctx context.Context, userService *user.Service, channelService *chan
 		E:                echo.New(),
 		userService:      userService,
 		channelService:   channelService,
-		q:                q,
+		eventbus:         q,
 		webSocketHandler: webSocketHandler,
 	}
 

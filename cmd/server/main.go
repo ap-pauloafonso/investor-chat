@@ -26,9 +26,10 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
 
-	ctx := context.Background()
+	// load cfg
 	var cfg config.GlobalConfig
 	if err := envconfig.Process(ctx, &cfg); err != nil {
 		utils.LogErrorFatal(err)
@@ -37,7 +38,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 
-	slog.Info("starting the server")
+	slog.Info("starting the server...")
 
 	// Initialize the database connection pool
 	db, err := pgxpool.Connect(context.Background(), cfg.PostgresConnection)
@@ -48,16 +49,19 @@ func main() {
 	// Close the database connection pool when the application exits
 	defer db.Close()
 
-	queue, err := eventbus.New(cfg.RabbitmqConnection)
+	// create event bus
+	eventbus, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
-	defer queue.Close()
+	defer eventbus.Close()
 
+	// create user repository
 	userRepository := storage.NewUserRepository(db)
 	// Create the user service
 	userService := user.NewService(userRepository)
 
+	// create channel repository
 	channelRepository := storage.NewChannelRepository(db)
 
 	grpcConn, err := grpc.Dial(cfg.GrpcConnection, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -68,16 +72,20 @@ func main() {
 
 	grpcClient := pb.NewArchiveServiceClient(grpcConn)
 
-	wserver := websocket.NewWebSocketHandler(queue, grpcClient)
+	// create websocket handler
+	wserver := websocket.NewWebSocketHandler(eventbus, grpcClient)
+	// start printing the sessions
 	wserver.PrintOnlineUsers()
-	channelService := channel.NewService(channelRepository, queue, wserver)
+
+	// create channel service
+	channelService := channel.NewService(channelRepository, eventbus, wserver)
 
 	// Create the application instance
-	server := server.NewApp(ctx, userService, channelService, queue, frontend.FS, wserver)
+	server := server.NewApp(ctx, userService, channelService, eventbus, frontend.FS, wserver)
 
 	// Start the server
-
 	go func() {
+		slog.Info(fmt.Sprintf("server is running on :%d", cfg.ServerPort))
 		if err := server.E.Start(fmt.Sprintf(":%d", cfg.ServerPort)); err != nil {
 			utils.LogErrorFatal(err)
 		}

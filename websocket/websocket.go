@@ -98,7 +98,7 @@ func (c *ChannelConnections) getChannelUsers(channel string) (*ChannelUserConnec
 type Handler struct {
 	archive            pb.ArchiveServiceClient
 	channelConnections ChannelConnections
-	q                  *eventbus.Eventbus
+	eventbus           *eventbus.Eventbus
 }
 
 type MessageObj struct {
@@ -108,13 +108,13 @@ type MessageObj struct {
 	Time     time.Time
 }
 
-func NewWebSocketHandler(q *eventbus.Eventbus, archive pb.ArchiveServiceClient) *Handler {
+func NewWebSocketHandler(eventbus *eventbus.Eventbus, archive pb.ArchiveServiceClient) *Handler {
 
 	channels := make(map[string]*ChannelUserConnections)
 
 	return &Handler{
 		channelConnections: ChannelConnections{channels: channels},
-		q:                  q,
+		eventbus:           eventbus,
 		archive:            archive,
 	}
 }
@@ -172,7 +172,7 @@ func (w *Handler) HandleRequest(c echo.Context) error {
 		}
 
 		// send the payload to queue
-		err = w.q.PublishUserMessageCommand(string(j))
+		err = w.eventbus.PublishUserMessageCommand(string(j))
 		if err != nil {
 			slog.Error(err.Error())
 		}
@@ -184,7 +184,7 @@ func (w *Handler) HandleRequest(c echo.Context) error {
 				Channel: channelParam,
 				Time:    t,
 			})
-			err := w.q.PublishBotCommandRequest(string(stock))
+			err := w.eventbus.PublishBotCommandRequest(string(stock))
 			if err != nil {
 				slog.Error(err.Error())
 			}

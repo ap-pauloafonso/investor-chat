@@ -16,12 +16,12 @@ var (
 
 type Service struct {
 	r         Repository
-	q         Queue
+	eventbus  Eventbus
 	websocket WebSocket
 }
 
-func NewService(chatRepository Repository, q Queue, w WebSocket) *Service {
-	return &Service{chatRepository, q, w}
+func NewService(chatRepository Repository, eventbus Eventbus, w WebSocket) *Service {
+	return &Service{chatRepository, eventbus, w}
 }
 
 type Repository interface {
@@ -34,7 +34,7 @@ func (s *Service) GetAllChannels(ctx context.Context) ([]string, error) {
 	return s.r.GetChannels(ctx)
 }
 
-type Queue interface {
+type Eventbus interface {
 	PublishUpdateChannelsCommand() error
 }
 
@@ -71,7 +71,7 @@ func (s *Service) CreateChannel(ctx context.Context, name string) error {
 		return err
 	}
 
-	err = s.q.PublishUpdateChannelsCommand()
+	err = s.eventbus.PublishUpdateChannelsCommand()
 	if err != nil {
 		return err
 	}

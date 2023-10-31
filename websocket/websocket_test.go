@@ -76,7 +76,7 @@ func TestUserConnected(t *testing.T) {
 	e.GET("/ws/:channel", func(c echo.Context) error {
 
 		c.Set("username", "paulo")
-		return wH.HandleRequest(c) // Call the HandleRequest method of your Handler
+		return wH.HandleRequest(c)
 
 	})
 

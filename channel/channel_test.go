@@ -55,11 +55,11 @@ func (m *mockRepository) GetRecentMessages(channel string, maxMessages int) ([]u
 	return m.recentMsgs[channel], m.recentMessagesErr
 }
 
-type mockQueue struct {
+type mockEventBus struct {
 	errToReturn error
 }
 
-func (m *mockQueue) PublishUpdateChannelsCommand() error {
+func (m *mockEventBus) PublishUpdateChannelsCommand() error {
 	return m.errToReturn
 }
 
@@ -82,7 +82,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Valid Channel Creation", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}, getChannelErr: errChannelExists}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 		err := service.CreateChannel(context.Background(), "newChannel")
@@ -99,7 +99,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Short Channel Name", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
@@ -111,7 +111,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Long Channel Name", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
@@ -124,7 +124,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Invalid Channel Name", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
@@ -136,7 +136,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Channel Already Exists", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}, getChannelErr: nil}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
@@ -149,7 +149,7 @@ func TestCreateChannel(t *testing.T) {
 	t.Run("Error Saving Channel", func(t *testing.T) {
 		saveErr := errors.New("save err")
 		repo := &mockRepository{channels: []string{"channel1"}, saveChannelErr: saveErr, getChannelErr: errChannelExists}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
@@ -161,7 +161,7 @@ func TestCreateChannel(t *testing.T) {
 
 	t.Run("Error Publishing Update Channels Command", func(t *testing.T) {
 		repo := &mockRepository{channels: []string{"channel1"}, getChannelErr: errChannelExists, saveChannelErr: nil, errToReturn: errors.New("mock queue error")}
-		queue := &mockQueue{}
+		queue := &mockEventBus{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 

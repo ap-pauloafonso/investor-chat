@@ -24,6 +24,8 @@ import (
 func main() {
 	ctx := context.Background()
 	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
+
+	//load cfg
 	var cfg config.GlobalConfig
 	if err := envconfig.Process(ctx, &cfg); err != nil {
 		utils.LogErrorFatal(err)
@@ -47,24 +49,25 @@ func main() {
 	// Close the database connection pool when the application exits
 	defer db.Close()
 
+	// create message repository
 	repository := storage.NewMessageRepository(db)
-	// Create an instance of your archive service
 
-	queue, err := eventbus.New(cfg.RabbitmqConnection)
+	// create eventbus
+	eventbus, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
-	defer queue.Close()
-
-	archiveService := archive.NewService(repository, queue)
+	defer eventbus.Close()
+	// Create an instance of  archive service
+	archiveService := archive.NewService(repository, eventbus)
+	// init archiver consumer
 	archiveService.InitConsumer(ctx)
-
-	// Create an instance of your gRPC service
+	// Create an instance of gRPC service
 	archiveGRPCService := NewArchiveGRPCService(archiveService)
 
 	reflection.Register(grpcServer)
 
-	// Register your gRPC service on the gRPC server
+	// Register gRPC service on the gRPC server
 	pb.RegisterArchiveServiceServer(grpcServer, archiveGRPCService)
 
 	slog.Info(fmt.Sprintf("gRPC server is running on :%d", cfg.ArchiverServerPort))

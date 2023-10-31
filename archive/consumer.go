@@ -8,7 +8,7 @@ import (
 )
 
 func (s *Service) InitConsumer(ctx context.Context) {
-	err := s.q.ConsumeUserMessageCommandForStorage(func(payload []byte) error {
+	err := s.eventbus.ConsumeUserMessageCommandForStorage(func(payload []byte) error {
 		var obj websocket.MessageObj
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {

@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) initConsumers(ctx context.Context) {
-	err := s.q.ConsumeUserMessageCommandForWSBroadcast(func(payload []byte) error {
+	err := s.eventbus.ConsumeUserMessageCommandForWSBroadcast(func(payload []byte) error {
 
 		var obj websocket.MessageObj
 		err := json.Unmarshal(payload, &obj)
@@ -24,7 +24,7 @@ func (s *Server) initConsumers(ctx context.Context) {
 		utils.LogErrorFatal(err)
 	}
 
-	err = s.q.ConsumeUpdateChannelsCommand(ctx, func(ctx context.Context, payload []byte) error {
+	err = s.eventbus.ConsumeUpdateChannelsCommand(ctx, func(ctx context.Context, payload []byte) error {
 		// get all the channelConnections
 		channels, err := s.channelService.GetAllChannels(ctx)
 		if err != nil {
@@ -37,7 +37,7 @@ func (s *Server) initConsumers(ctx context.Context) {
 		utils.LogErrorFatal(err)
 	}
 
-	err = s.q.ConsumeBotCommandResponse(func(payload []byte) error {
+	err = s.eventbus.ConsumeBotCommandResponse(func(payload []byte) error {
 
 		var obj eventbus.BotCommandResponse
 		err := json.Unmarshal(payload, &obj)
