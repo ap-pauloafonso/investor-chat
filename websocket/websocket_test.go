@@ -43,7 +43,7 @@ type MockArchiveService struct {
 	err      error
 }
 
-func (m *MockArchiveService) GetRecentMessages(ctx context.Context, request *pb.GetRecentMessagesRequest, opts ...grpc.CallOption) (*pb.GetRecentMessagesResponse, error) {
+func (m *MockArchiveService) GetRecentMessages(_ context.Context, _ *pb.GetRecentMessagesRequest, _ ...grpc.CallOption) (*pb.GetRecentMessagesResponse, error) {
 	// Return predefined messages or errors for testing
 	// For example:
 	return &pb.GetRecentMessagesResponse{Messages: m.messages}, nil
@@ -66,7 +66,7 @@ func TestUserConnected(t *testing.T) {
 		err: nil,
 	}
 
-	// Create a new WebSocketHandler for testing
+	// Create a new Handler for testing
 	wH := NewWebSocketHandler(nil, archive)
 
 	// Create an Echo instance
@@ -76,7 +76,7 @@ func TestUserConnected(t *testing.T) {
 	e.GET("/ws/:channel", func(c echo.Context) error {
 
 		c.Set("username", "paulo")
-		return wH.HandleRequest(c) // Call the HandleRequest method of your WebSocketHandler
+		return wH.HandleRequest(c) // Call the HandleRequest method of your Handler
 
 	})
 
@@ -88,7 +88,7 @@ func TestUserConnected(t *testing.T) {
 	reqURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/ws/channel1"
 
 	// Perform a regular HTTP request, not a WebSocket upgrade
-	conn, _, err := websocket.Dial(context.Background(), reqURL, nil)
+	conn, _, err := websocket.Dial(context.Background(), reqURL, nil) //nolint
 	if err != nil {
 		t.Fatalf("Failed to connect to the WebSocket endpoint: %v", err)
 	}

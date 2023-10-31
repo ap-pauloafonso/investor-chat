@@ -1,10 +1,11 @@
 package server
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"github.com/ap-pauloafonso/investor-chat/channel"
-	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/user"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/ap-pauloafonso/investor-chat/websocket"
@@ -24,8 +25,8 @@ type Server struct {
 	E                *echo.Echo
 	userService      *user.Service
 	channelService   *channel.Service
-	q                *queue.Queue
-	webSocketHandler *websocket.WebSocketHandler
+	q                *eventbus.Eventbus
+	webSocketHandler *websocket.Handler
 }
 
 type UserRequest struct {
@@ -44,7 +45,7 @@ func (s *Server) RegisterUserHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, utils.ErrorMessage{ErrorMessage: fmt.Sprintf("Failed register user: %s", err.Error())})
 	}
 
-	if err := s.userService.Register(u.Username, u.Password); err != nil {
+	if err := s.userService.Register(c.Request().Context(), u.Username, u.Password); err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorMessage{ErrorMessage: fmt.Sprintf("Failed register user: %s", err.Error())})
 
 	}
@@ -81,7 +82,7 @@ func (s *Server) LoginUserHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, utils.ErrorMessage{ErrorMessage: fmt.Sprintf("Failed register user: %s", err.Error())})
 	}
 
-	if err := s.userService.Login(u.Username, u.Password); err != nil {
+	if err := s.userService.Login(c.Request().Context(), u.Username, u.Password); err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorMessage{ErrorMessage: fmt.Sprintf("Failed register user: %s", err.Error())})
 
 	}
@@ -106,7 +107,7 @@ func (s *Server) GetChannelsHandler(c echo.Context) error {
 		Channels []string `json:"channels"`
 	}
 
-	channels, err := s.channelService.GetAllChannels()
+	channels, err := s.channelService.GetAllChannels(c.Request().Context())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorMessage{ErrorMessage: "Internal Server Error"})
 	}
@@ -132,7 +133,7 @@ func (s *Server) CreateChannelHandler(c echo.Context) error {
 	}
 
 	// Call the service to create the channel
-	err := s.channelService.CreateChannel(req.Name)
+	err := s.channelService.CreateChannel(c.Request().Context(), req.Name)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, utils.ErrorMessage{ErrorMessage: err.Error()})
 	}
@@ -142,7 +143,7 @@ func (s *Server) CreateChannelHandler(c echo.Context) error {
 }
 
 // NewApp creates a new instance of the Server
-func NewApp(userService *user.Service, channelService *channel.Service, q *queue.Queue, frontendFS embed.FS, webSocketHandler *websocket.WebSocketHandler) *Server {
+func NewApp(ctx context.Context, userService *user.Service, channelService *channel.Service, q *eventbus.Eventbus, frontendFS embed.FS, webSocketHandler *websocket.Handler) *Server {
 	server := &Server{
 		E:                echo.New(),
 		userService:      userService,
@@ -173,7 +174,7 @@ func NewApp(userService *user.Service, channelService *channel.Service, q *queue
 		return c.Redirect(http.StatusSeeOther, "/app/")
 	})
 
-	server.initConsumers()
+	server.initConsumers(ctx)
 
 	return server
 

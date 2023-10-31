@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"time"
@@ -36,11 +37,11 @@ type Model struct {
 }
 
 type Repository interface {
-	SaveUser(username, password string) error
-	GetUser(username string) (*Model, error)
+	SaveUser(ctx context.Context, username, password string) error
+	GetUser(ctx context.Context, username string) (*Model, error)
 }
 
-func (s *Service) Register(username, password string) error {
+func (s *Service) Register(ctx context.Context, username, password string) error {
 	if len(username) < 3 || len(password) < 3 {
 		return errUserNamePasswordShort
 	}
@@ -48,7 +49,7 @@ func (s *Service) Register(username, password string) error {
 	if len(username) > 50 || len(password) > 50 {
 		return errUserNamePasswordLong
 	}
-	_, err := s.r.GetUser(username)
+	_, err := s.r.GetUser(ctx, username)
 	if err == nil {
 		return errUsernameAlreadyTaken
 	}
@@ -58,7 +59,7 @@ func (s *Service) Register(username, password string) error {
 		return errHashingPassword
 	}
 
-	err = s.r.SaveUser(username, hashedPassword)
+	err = s.r.SaveUser(ctx, username, hashedPassword)
 	if err != nil {
 		return errStoringUser
 	}
@@ -66,8 +67,8 @@ func (s *Service) Register(username, password string) error {
 	return nil
 }
 
-func (s *Service) Login(username, password string) error {
-	user, err := s.r.GetUser(username)
+func (s *Service) Login(ctx context.Context, username, password string) error {
+	user, err := s.r.GetUser(ctx, username)
 	if err != nil {
 		return errInvalidCredentials
 	}

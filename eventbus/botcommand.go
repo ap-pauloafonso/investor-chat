@@ -1,4 +1,4 @@
-package queue
+package eventbus
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ type BotCommandResponse struct {
 	Time             time.Time
 }
 
-func (q *Queue) PublishBotCommandRequest(msg string) error {
-	err := q.publisher.Publish(
+func (e *Eventbus) PublishBotCommandRequest(msg string) error {
+	err := e.publisher.Publish(
 		[]byte(msg),
 		[]string{commandRequestRoutingKey},
 		rabbitmq.WithPublishOptionsContentType(contentType),
@@ -35,8 +35,8 @@ func (q *Queue) PublishBotCommandRequest(msg string) error {
 	return nil
 }
 
-func (q *Queue) PublishBotCommandResponse(msg string) error {
-	err := q.publisher.Publish(
+func (e *Eventbus) PublishBotCommandResponse(msg string) error {
+	err := e.publisher.Publish(
 		[]byte(msg),
 		[]string{commandResponseRoutingKey},
 		rabbitmq.WithPublishOptionsContentType(contentType),
@@ -48,9 +48,9 @@ func (q *Queue) PublishBotCommandResponse(msg string) error {
 	return nil
 }
 
-func (q *Queue) ConsumeBotCommandRequest(fn func(payload []byte) error) error {
+func (e *Eventbus) ConsumeBotCommandRequest(fn func(payload []byte) error) error {
 	consumer, err := rabbitmq.NewConsumer(
-		q.conn,
+		e.conn,
 		func(d rabbitmq.Delivery) rabbitmq.Action {
 			err := fn(d.Body)
 			if err != nil {
@@ -66,13 +66,13 @@ func (q *Queue) ConsumeBotCommandRequest(fn func(payload []byte) error) error {
 	if err != nil {
 		return fmt.Errorf("error in ConsumeBotCommandRequest: %w", err)
 	}
-	q.consumers = append(q.consumers, consumer)
+	e.consumers = append(e.consumers, consumer)
 	return nil
 }
 
-func (q *Queue) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
+func (e *Eventbus) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
 	consumer, err := rabbitmq.NewConsumer(
-		q.conn,
+		e.conn,
 		func(d rabbitmq.Delivery) rabbitmq.Action {
 			err := fn(d.Body)
 			if err != nil {
@@ -88,6 +88,6 @@ func (q *Queue) ConsumeBotCommandResponse(fn func(payload []byte) error) error {
 	if err != nil {
 		return fmt.Errorf("error in ConsumeBotCommandResponse: %w", err)
 	}
-	q.consumers = append(q.consumers, consumer)
+	e.consumers = append(e.consumers, consumer)
 	return nil
 }

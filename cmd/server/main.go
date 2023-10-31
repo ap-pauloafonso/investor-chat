@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/ap-pauloafonso/investor-chat/channel"
 	"github.com/ap-pauloafonso/investor-chat/config"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/frontend"
 	"github.com/ap-pauloafonso/investor-chat/pb"
-	"github.com/ap-pauloafonso/investor-chat/queue"
 	"github.com/ap-pauloafonso/investor-chat/server"
 	"github.com/ap-pauloafonso/investor-chat/storage"
 	"github.com/ap-pauloafonso/investor-chat/user"
@@ -48,7 +48,7 @@ func main() {
 	// Close the database connection pool when the application exits
 	defer db.Close()
 
-	queue, err := queue.NewQueue(cfg.RabbitmqConnection)
+	queue, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
@@ -73,7 +73,7 @@ func main() {
 	channelService := channel.NewService(channelRepository, queue, wserver)
 
 	// Create the application instance
-	server := server.NewApp(userService, channelService, queue, frontend.FS, wserver)
+	server := server.NewApp(ctx, userService, channelService, queue, frontend.FS, wserver)
 
 	// Start the server
 

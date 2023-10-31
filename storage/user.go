@@ -16,8 +16,8 @@ func NewUserRepository(db *pgxpool.Pool) *UserRepository {
 	return &UserRepository{db}
 }
 
-func (r *UserRepository) SaveUser(username, password string) error {
-	_, err := r.db.Exec(context.Background(), "INSERT INTO users (username, password) VALUES ($1, $2)", username, password)
+func (r *UserRepository) SaveUser(ctx context.Context, username, password string) error {
+	_, err := r.db.Exec(ctx, "INSERT INTO users (username, password) VALUES ($1, $2)", username, password)
 	if err != nil {
 		return fmt.Errorf("error saving user: %w", err)
 	}
@@ -25,9 +25,9 @@ func (r *UserRepository) SaveUser(username, password string) error {
 	return nil
 }
 
-func (r *UserRepository) GetUser(username string) (*user.Model, error) {
+func (r *UserRepository) GetUser(ctx context.Context, username string) (*user.Model, error) {
 	var storedPassword string
-	err := r.db.QueryRow(context.Background(), "SELECT password FROM users WHERE username = $1", username).Scan(&storedPassword)
+	err := r.db.QueryRow(ctx, "SELECT password FROM users WHERE username = $1", username).Scan(&storedPassword)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"net/http"
 	"strings"
 )
@@ -16,17 +16,18 @@ var (
 )
 
 type Bot struct {
-	q *queue.Queue
+	q *eventbus.Eventbus
 }
 
-func NewBot(q *queue.Queue) *Bot {
+func NewBot(q *eventbus.Eventbus) *Bot {
 	return &Bot{q: q}
 }
 
+const stockURL = "https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv"
+
 func (b *Bot) Process() error {
-	const stockURL = "https://stooq.com/q/l/?s=%s&f=sd2t2ohlcv&h&e=csv"
 	err := b.q.ConsumeBotCommandRequest(func(payload []byte) error {
-		var obj queue.BotCommandRequest
+		var obj eventbus.BotCommandRequest
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {
 			return err
@@ -37,7 +38,7 @@ func (b *Bot) Process() error {
 			return err
 		}
 
-		var result queue.BotCommandResponse
+		var result eventbus.BotCommandResponse
 
 		result.GeneratedMessage = message
 		result.Channel = obj.Channel
@@ -65,7 +66,7 @@ func (b *Bot) Process() error {
 func GetStockMessage(url, stockCode string) (string, error) {
 	urlParsed := fmt.Sprintf(url, stockCode)
 
-	response, err := http.Get(urlParsed)
+	response, err := http.Get(urlParsed) //nolint
 	if err != nil {
 		return "", err
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/ap-pauloafonso/investor-chat/bot"
 	"github.com/ap-pauloafonso/investor-chat/config"
-	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/lmittmann/tint"
 	"github.com/sethvargo/go-envconfig"
@@ -27,7 +27,7 @@ func main() {
 
 	slog.Info("starting the bot")
 
-	q, err := queue.NewQueue(cfg.RabbitmqConnection)
+	q, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}

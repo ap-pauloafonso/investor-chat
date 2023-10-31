@@ -16,8 +16,8 @@ func NewChannelRepository(db *pgxpool.Pool) *ChannelRepository {
 	return &ChannelRepository{db}
 }
 
-func (c *ChannelRepository) GetChannels() ([]string, error) {
-	rows, err := c.db.Query(context.Background(), "SELECT name FROM channels")
+func (c *ChannelRepository) GetChannels(ctx context.Context) ([]string, error) {
+	rows, err := c.db.Query(ctx, "SELECT name FROM channels")
 	if err != nil {
 		return nil, fmt.Errorf("error fetching channels: %w", err)
 	}
@@ -39,17 +39,17 @@ func (c *ChannelRepository) GetChannels() ([]string, error) {
 	return channels, nil
 }
 
-func (c *ChannelRepository) SaveChannel(name string) error {
-	_, err := c.db.Exec(context.Background(), "INSERT INTO channels (name) VALUES ($1)", name)
+func (c *ChannelRepository) SaveChannel(ctx context.Context, name string) error {
+	_, err := c.db.Exec(ctx, "INSERT INTO channels (name) VALUES ($1)", name)
 	if err != nil {
 		return fmt.Errorf("error saving channel: %w", err)
 	}
 	return nil
 }
 
-func (c *ChannelRepository) GetChannel(name string) (string, error) {
+func (c *ChannelRepository) GetChannel(ctx context.Context, name string) (string, error) {
 	var channelName string
-	err := c.db.QueryRow(context.Background(), "SELECT name FROM channels WHERE name = $1", name).Scan(&channelName)
+	err := c.db.QueryRow(ctx, "SELECT name FROM channels WHERE name = $1", name).Scan(&channelName)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", fmt.Errorf("channel with name '%s' not found", name)

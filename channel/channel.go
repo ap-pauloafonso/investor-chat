@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"context"
 	"errors"
 	"github.com/ap-pauloafonso/investor-chat/user"
 	"regexp"
@@ -24,17 +25,13 @@ func NewService(chatRepository Repository, q Queue, w WebSocket) *Service {
 }
 
 type Repository interface {
-	GetChannels() ([]string, error)
-	SaveChannel(name string) error
-	GetChannel(name string) (string, error)
+	GetChannels(ctx context.Context) ([]string, error)
+	SaveChannel(ctx context.Context, name string) error
+	GetChannel(ctx context.Context, name string) (string, error)
 }
 
-type ArchiveServer interface {
-	GetRecentMessages(channel string) ([]user.Message, error)
-}
-
-func (s *Service) GetAllChannels() ([]string, error) {
-	return s.r.GetChannels()
+func (s *Service) GetAllChannels(ctx context.Context) ([]string, error) {
+	return s.r.GetChannels(ctx)
 }
 
 type Queue interface {
@@ -52,7 +49,7 @@ func isValidChannelName(name string) bool {
 	return validChannelRegex.MatchString(name)
 }
 
-func (s *Service) CreateChannel(name string) error {
+func (s *Service) CreateChannel(ctx context.Context, name string) error {
 	if len(name) < 3 {
 		return errChannelNameShort
 	}
@@ -64,12 +61,12 @@ func (s *Service) CreateChannel(name string) error {
 		return errInvalidChannelName
 	}
 
-	_, err := s.r.GetChannel(name)
+	_, err := s.r.GetChannel(ctx, name)
 	if err == nil {
 		return errChannelExists
 	}
 
-	err = s.r.SaveChannel(name)
+	err = s.r.SaveChannel(ctx, name)
 	if err != nil {
 		return err
 	}

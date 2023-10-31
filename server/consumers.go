@@ -1,13 +1,14 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/ap-pauloafonso/investor-chat/queue"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/ap-pauloafonso/investor-chat/websocket"
 )
 
-func (s *Server) initConsumers() {
+func (s *Server) initConsumers(ctx context.Context) {
 	err := s.q.ConsumeUserMessageCommandForWSBroadcast(func(payload []byte) error {
 
 		var obj websocket.MessageObj
@@ -23,14 +24,14 @@ func (s *Server) initConsumers() {
 		utils.LogErrorFatal(err)
 	}
 
-	err = s.q.ConsumeUpdateChannelsCommand(func(payload []byte) error {
+	err = s.q.ConsumeUpdateChannelsCommand(ctx, func(ctx context.Context, payload []byte) error {
 		// get all the channelConnections
-		channels, err := s.channelService.GetAllChannels()
+		channels, err := s.channelService.GetAllChannels(ctx)
 		if err != nil {
 			return err
 		}
 
-		return s.webSocketHandler.HandleChannelsUpdate(channels)
+		return s.webSocketHandler.HandleChannelsUpdate(ctx, channels)
 	})
 	if err != nil {
 		utils.LogErrorFatal(err)
@@ -38,7 +39,7 @@ func (s *Server) initConsumers() {
 
 	err = s.q.ConsumeBotCommandResponse(func(payload []byte) error {
 
-		var obj queue.BotCommandResponse
+		var obj eventbus.BotCommandResponse
 		err := json.Unmarshal(payload, &obj)
 		if err != nil {
 			return err

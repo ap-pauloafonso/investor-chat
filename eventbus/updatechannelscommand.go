@@ -1,11 +1,14 @@
-package queue
+package eventbus
 
-import "github.com/wagslane/go-rabbitmq"
+import (
+	"context"
+	"github.com/wagslane/go-rabbitmq"
+)
 
 const commandUpdateChannelsRoutingKey = "updatechannels-command"
 
-func (q *Queue) PublishUpdateChannelsCommand() error {
-	err := q.publisher.Publish(
+func (e *Eventbus) PublishUpdateChannelsCommand() error {
+	err := e.publisher.Publish(
 		[]byte("[channel_list_update]"),
 		[]string{commandUpdateChannelsRoutingKey},
 		rabbitmq.WithPublishOptionsContentType("text/plain"),
@@ -18,11 +21,11 @@ func (q *Queue) PublishUpdateChannelsCommand() error {
 	return nil
 }
 
-func (q *Queue) ConsumeUpdateChannelsCommand(fn func(payload []byte) error) error {
+func (e *Eventbus) ConsumeUpdateChannelsCommand(ctx context.Context, fn func(ctx context.Context, payload []byte) error) error {
 	consumer, err := rabbitmq.NewConsumer(
-		q.conn,
+		e.conn,
 		func(d rabbitmq.Delivery) rabbitmq.Action {
-			err := fn(d.Body)
+			err := fn(ctx, d.Body)
 			if err != nil {
 				return rabbitmq.NackRequeue
 			}
@@ -39,7 +42,7 @@ func (q *Queue) ConsumeUpdateChannelsCommand(fn func(payload []byte) error) erro
 		return err
 	}
 
-	q.consumers = append(q.consumers, consumer)
+	e.consumers = append(e.consumers, consumer)
 
 	return nil
 }

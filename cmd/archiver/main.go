@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/ap-pauloafonso/investor-chat/archive"
 	"github.com/ap-pauloafonso/investor-chat/config"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/pb"
-	"github.com/ap-pauloafonso/investor-chat/queue"
 	"github.com/ap-pauloafonso/investor-chat/storage"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -22,8 +22,8 @@ import (
 )
 
 func main() {
-	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
 	ctx := context.Background()
+	slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, nil)))
 	var cfg config.GlobalConfig
 	if err := envconfig.Process(ctx, &cfg); err != nil {
 		utils.LogErrorFatal(err)
@@ -50,14 +50,14 @@ func main() {
 	repository := storage.NewMessageRepository(db)
 	// Create an instance of your archive service
 
-	queue, err := queue.NewQueue(cfg.RabbitmqConnection)
+	queue, err := eventbus.New(cfg.RabbitmqConnection)
 	if err != nil {
 		utils.LogErrorFatal(err)
 	}
 	defer queue.Close()
 
 	archiveService := archive.NewService(repository, queue)
-	archiveService.InitConsumer()
+	archiveService.InitConsumer(ctx)
 
 	// Create an instance of your gRPC service
 	archiveGRPCService := NewArchiveGRPCService(archiveService)
@@ -83,7 +83,7 @@ func NewArchiveGRPCService(service *archive.Service) *ArchiveGRPCService {
 }
 
 func (s *ArchiveGRPCService) GetRecentMessages(ctx context.Context, req *pb.GetRecentMessagesRequest) (*pb.GetRecentMessagesResponse, error) {
-	messages, err := s.service.GetRecentMessages(req.Channel)
+	messages, err := s.service.GetRecentMessages(ctx, req.Channel)
 	if err != nil {
 		return nil, err
 	}

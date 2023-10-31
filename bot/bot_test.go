@@ -16,19 +16,28 @@ func TestGetStockMessageWithServer(t *testing.T) {
 AAPL.US,2023-10-13,22:00:14,181.42,181.93,178.14,178.85,51456082`
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "text/csv")
-			w.Write([]byte(response))
+			_, err := w.Write([]byte(response))
+			if err != nil {
+				t.Fatal(err)
+			}
 		} else if r.URL.Query().Get("s") == "GOOG" {
 			// Serve a CSV response with "N/D" indicating an invalid stock code
 			response := `Symbol,Date,Time,Open,High,Low,Close,Volume
 ASDADADS,N/D,N/D,N/D,N/D,N/D,N/D,N/D`
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "text/csv")
-			w.Write([]byte(response))
+			_, err := w.Write([]byte(response))
+			if err != nil {
+				t.Fatal(err)
+			}
 		} else {
 			// Serve an empty response
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "text/csv")
-			w.Write([]byte{})
+			_, err := w.Write([]byte{})
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}))
 	defer testServer.Close()

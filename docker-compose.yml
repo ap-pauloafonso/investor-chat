@@ -17,6 +17,7 @@ services:
       retries: 5
 
   rabbitmq:
+    restart: always
     image: "rabbitmq:3.12.6-management-alpine"
     ports:
       - "5672:5672"
@@ -30,6 +31,7 @@ services:
       timeout: 20s
       retries: 5
   bot:
+    restart: always
     env_file:
       - .env
     build:
@@ -39,6 +41,7 @@ services:
       rabbitmq:
         condition: service_healthy
   archiver:
+      restart: always
       env_file: .env
       build:
         context: .
@@ -49,6 +52,7 @@ services:
         rabbitmq:
           condition: service_healthy
   server:
+    restart: always
     env_file: .env
     build:
       context: .
@@ -65,6 +69,7 @@ services:
       timeout: 5s
       retries: 3
   server2:
+    restart: always
     env_file: .env
     image: investor-chat_server:latest
     depends_on:
@@ -79,6 +84,7 @@ services:
       retries: 3
 
   haproxy:
+    restart: always
     image: haproxy:2.4
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg

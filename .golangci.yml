@@ -6,3 +6,8 @@ linters:
     - errcheck
     - nilnil
     - nilerr
+    - contextcheck
+    - noctx
+    - bodyclose
+    - errname
+    - sqlclosecheck

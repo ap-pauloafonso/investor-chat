@@ -1,10 +1,10 @@
-package queue
+package eventbus
 
 import (
 	"github.com/wagslane/go-rabbitmq"
 )
 
-type Queue struct {
+type Eventbus struct {
 	conn      *rabbitmq.Conn
 	publisher *rabbitmq.Publisher
 	consumers []*rabbitmq.Consumer
@@ -13,9 +13,9 @@ type Queue struct {
 const exchangeName = "events"
 const contentType = "application/json"
 
-func NewQueue(rabbitmqUrl string) (*Queue, error) {
+func New(rabbitmqURL string) (*Eventbus, error) {
 
-	rmq, err := rabbitmq.NewConn(rabbitmqUrl, rabbitmq.WithConnectionOptionsLogging)
+	rmq, err := rabbitmq.NewConn(rabbitmqURL, rabbitmq.WithConnectionOptionsLogging)
 
 	if err != nil {
 		return nil, err
@@ -31,17 +31,17 @@ func NewQueue(rabbitmqUrl string) (*Queue, error) {
 		return nil, err
 	}
 
-	return &Queue{
+	return &Eventbus{
 		conn:      rmq,
 		publisher: publisher,
 	}, nil
 
 }
 
-func (q *Queue) Close() {
-	for _, item := range q.consumers {
+func (e *Eventbus) Close() {
+	for _, item := range e.consumers {
 		item.Close()
 	}
-	q.publisher.Close()
-	q.conn.Close()
+	e.publisher.Close()
+	e.conn.Close()
 }

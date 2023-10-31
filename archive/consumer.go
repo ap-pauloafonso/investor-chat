@@ -1,12 +1,13 @@
 package archive
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/ap-pauloafonso/investor-chat/websocket"
 )
 
-func (s *Service) InitConsumer() {
+func (s *Service) InitConsumer(ctx context.Context) {
 	err := s.q.ConsumeUserMessageCommandForStorage(func(payload []byte) error {
 		var obj websocket.MessageObj
 		err := json.Unmarshal(payload, &obj)
@@ -14,7 +15,7 @@ func (s *Service) InitConsumer() {
 			return err
 		}
 
-		err = s.SaveMessage(obj.Channel, obj.Username, obj.Message, obj.Time)
+		err = s.SaveMessage(ctx, obj.Channel, obj.Username, obj.Message, obj.Time)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package archive
 
 import (
+	"context"
 	"errors"
 	"github.com/ap-pauloafonso/investor-chat/user"
 	"testing"
@@ -9,12 +10,11 @@ import (
 
 type mockRepository struct {
 	recentMessagesErr error
-	channelData       map[string]string
 	recentMsgs        map[string][]user.Message
 	errToReturn       error
 }
 
-func (m *mockRepository) SaveMessage(c, u, msg string, timestamp time.Time) error {
+func (m *mockRepository) SaveMessage(_ context.Context, c, u, msg string, timestamp time.Time) error {
 	if m.recentMsgs == nil {
 		m.recentMsgs = map[string][]user.Message{}
 	}
@@ -30,7 +30,7 @@ func (m *mockRepository) SaveMessage(c, u, msg string, timestamp time.Time) erro
 	return m.errToReturn
 }
 
-func (m *mockRepository) GetRecentMessages(channel string, maxMessages int) ([]user.Message, error) {
+func (m *mockRepository) GetRecentMessages(_ context.Context, channel string, maxMessages int) ([]user.Message, error) {
 	if len(m.recentMsgs[channel]) > maxMessages {
 		return m.recentMsgs[channel][len(m.recentMsgs[channel])-maxMessages:], m.errToReturn
 	}
@@ -45,7 +45,7 @@ func TestSaveMessage(t *testing.T) {
 		service := NewService(repo, nil)
 
 		timestamp := time.Now()
-		err := service.SaveMessage("channel1", "user1", "Hello", timestamp)
+		err := service.SaveMessage(context.Background(), "channel1", "user1", "Hello", timestamp)
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -59,7 +59,7 @@ func TestSaveMessage(t *testing.T) {
 
 		repo.errToReturn = errors.New("mock repository error")
 		timestamp := time.Now()
-		err := service.SaveMessage("channel1", "user1", "Hello", timestamp)
+		err := service.SaveMessage(context.Background(), "channel1", "user1", "Hello", timestamp)
 		if !errors.Is(err, repo.errToReturn) {
 			t.Errorf("Expected %v, got %v", repo.errToReturn, err)
 		}
@@ -80,7 +80,7 @@ func TestGetRecentMessages(t *testing.T) {
 			},
 		}
 
-		messages, err := service.GetRecentMessages("channel1")
+		messages, err := service.GetRecentMessages(context.Background(), "channel1")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -96,7 +96,7 @@ func TestGetRecentMessages(t *testing.T) {
 		service := NewService(repo, nil)
 
 		repo.errToReturn = errors.New("mock repository error")
-		messages, err := service.GetRecentMessages("channel1")
+		messages, err := service.GetRecentMessages(context.Background(), "channel1")
 		if !errors.Is(err, errStore) {
 			t.Errorf("Expected %v, got %v", repo.errToReturn, err)
 		}

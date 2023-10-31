@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ap-pauloafonso/investor-chat/eventbus"
 	"github.com/ap-pauloafonso/investor-chat/pb"
-	"github.com/ap-pauloafonso/investor-chat/queue"
 	"github.com/ap-pauloafonso/investor-chat/user"
 	"github.com/ap-pauloafonso/investor-chat/utils"
 	"github.com/labstack/echo/v4"
@@ -95,10 +95,10 @@ func (c *ChannelConnections) getChannelUsers(channel string) (*ChannelUserConnec
 
 }
 
-type WebSocketHandler struct {
+type Handler struct {
 	archive            pb.ArchiveServiceClient
 	channelConnections ChannelConnections
-	q                  *queue.Queue
+	q                  *eventbus.Eventbus
 }
 
 type MessageObj struct {
@@ -108,18 +108,18 @@ type MessageObj struct {
 	Time     time.Time
 }
 
-func NewWebSocketHandler(q *queue.Queue, archive pb.ArchiveServiceClient) *WebSocketHandler {
+func NewWebSocketHandler(q *eventbus.Eventbus, archive pb.ArchiveServiceClient) *Handler {
 
 	channels := make(map[string]*ChannelUserConnections)
 
-	return &WebSocketHandler{
+	return &Handler{
 		channelConnections: ChannelConnections{channels: channels},
 		q:                  q,
 		archive:            archive,
 	}
 }
 
-func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
+func (w *Handler) HandleRequest(c echo.Context) error {
 
 	// Extract the channel from the route parameter
 	channelParam := c.Param("channel")
@@ -146,7 +146,7 @@ func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
 
 	defer func() {
 
-		defer conn.CloseNow()
+		defer utils.ExecAndPrintErr(conn.CloseNow)
 		w.channelConnections.removeUser(channelParam, u)
 		slog.Info("[user disconnected]", "channel", channelParam, "user", u)
 
@@ -179,7 +179,7 @@ func (w *WebSocketHandler) HandleRequest(c echo.Context) error {
 
 		// stock bot, if it matches then we push the request to the queue
 		if okCheckStockCode, stockCode := checkBot(string(p)); okCheckStockCode {
-			stock, _ := json.Marshal(queue.BotCommandRequest{
+			stock, _ := json.Marshal(eventbus.BotCommandRequest{
 				Command: stockCode,
 				Channel: channelParam,
 				Time:    t,
@@ -200,7 +200,7 @@ type payload struct {
 	Time     time.Time
 }
 
-func (w *WebSocketHandler) BroadcastMessage(username, channel, msg string, isBoot bool, t time.Time) error {
+func (w *Handler) BroadcastMessage(username, channel, msg string, isBoot bool, t time.Time) error {
 	channelUsers, okChannel := w.channelConnections.getChannelUsers(channel)
 	if !okChannel {
 		return errChannelNotFound
@@ -228,7 +228,7 @@ func (w *WebSocketHandler) BroadcastMessage(username, channel, msg string, isBoo
 
 }
 
-func (w *WebSocketHandler) HandleChannelsUpdate(channels []string) error {
+func (w *Handler) HandleChannelsUpdate(ctx context.Context, channels []string) error {
 	// update server channel connection map
 	for _, c := range channels {
 		if _, ok := w.channelConnections.getChannelUsers(c); !ok {
@@ -240,7 +240,7 @@ func (w *WebSocketHandler) HandleChannelsUpdate(channels []string) error {
 	// broadcast it to everyone connected in ws
 	for _, channeList := range w.channelConnections.channels {
 		for _, user := range channeList.users {
-			err := user.Write(context.Background(), websocket.MessageText, []byte("[channel_list_update]"))
+			err := user.Write(ctx, websocket.MessageText, []byte("[channel_list_update]"))
 			if err != nil {
 				slog.Error("error writing [channel_list_update] to user", err)
 			}
@@ -252,7 +252,7 @@ func (w *WebSocketHandler) HandleChannelsUpdate(channels []string) error {
 
 }
 
-func (w *WebSocketHandler) PrintOnlineUsers() {
+func (w *Handler) PrintOnlineUsers() {
 	go func() {
 		for {
 			var args []any
@@ -266,11 +266,11 @@ func (w *WebSocketHandler) PrintOnlineUsers() {
 
 }
 
-func (w *WebSocketHandler) AddNewChannel(channel string) {
+func (w *Handler) AddNewChannel(channel string) {
 	w.channelConnections.addChannel(channel)
 }
 
-func (w *WebSocketHandler) SendRecentMessages(channel, username string, msgs []user.Message) error {
+func (w *Handler) SendRecentMessages(channel, username string, msgs []user.Message) error {
 	channelUsers, okChannel := w.channelConnections.getChannelUsers(channel)
 	if !okChannel {
 		return errors.New("channel not found")
@@ -319,7 +319,7 @@ func checkBot(msg string) (bool, string) {
 	return false, ""
 }
 
-func (w *WebSocketHandler) UserConnected(channel, username string) {
+func (w *Handler) UserConnected(channel, username string) {
 	// get recent messages using grpc
 	resp, err := w.archive.GetRecentMessages(context.Background(), &pb.GetRecentMessagesRequest{
 		Channel:     channel,

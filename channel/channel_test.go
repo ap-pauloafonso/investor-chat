@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"context"
 	"errors"
 	"github.com/ap-pauloafonso/investor-chat/user"
 	"testing"
@@ -18,20 +19,20 @@ type mockRepository struct {
 	errToReturn       error
 }
 
-func (m *mockRepository) GetChannels() ([]string, error) {
+func (m *mockRepository) GetChannels(_ context.Context) ([]string, error) {
 	return m.channels, m.errToReturn
 }
 
-func (m *mockRepository) SaveChannel(name string) error {
+func (m *mockRepository) SaveChannel(_ context.Context, name string) error {
 	m.savedChannel = name
 	return m.saveChannelErr
 }
 
-func (m *mockRepository) GetChannel(name string) (string, error) {
+func (m *mockRepository) GetChannel(_ context.Context, name string) (string, error) {
 	return m.channelData[name], m.getChannelErr
 }
 
-func (m *mockRepository) SaveMessage(channel, u, msg string, timestamp time.Time) error {
+func (m *mockRepository) SaveMessage(_ context.Context, channel, u, msg string, timestamp time.Time) error {
 	if m.recentMsgs == nil {
 		m.recentMsgs = map[string][]user.Message{}
 	}
@@ -72,22 +73,9 @@ func (m *mockWebSocket) AddNewChannel(channel string) {
 	m.addedChannel = channel
 }
 
-func (m *mockWebSocket) SendRecentMessages(channel, user string, msgs []user.Message) error {
+func (m *mockWebSocket) SendRecentMessages(_, _ string, msgs []user.Message) error {
 	m.msgSent = msgs
 	return m.sendErr
-}
-
-type archiveMock struct {
-	err      error
-	messages []user.Message
-}
-
-func (a *archiveMock) SaveMessage(channel, user, msg string, timestamp time.Time) error {
-	return a.err
-}
-
-func (a *archiveMock) GetRecentMessages(channel string) ([]user.Message, error) {
-	return a.messages, a.err
 }
 
 func TestCreateChannel(t *testing.T) {
@@ -97,7 +85,7 @@ func TestCreateChannel(t *testing.T) {
 		queue := &mockQueue{}
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
-		err := service.CreateChannel("newChannel")
+		err := service.CreateChannel(context.Background(), "newChannel")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
@@ -115,7 +103,7 @@ func TestCreateChannel(t *testing.T) {
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
-		err := service.CreateChannel("ab")
+		err := service.CreateChannel(context.Background(), "ab")
 		if err != errChannelNameShort {
 			t.Errorf("Expected %v, got %v", errChannelNameShort, err)
 		}
@@ -128,7 +116,7 @@ func TestCreateChannel(t *testing.T) {
 		service := NewService(repo, queue, ws)
 
 		longName := "looooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo"
-		err := service.CreateChannel(longName)
+		err := service.CreateChannel(context.Background(), longName)
 		if err != errChannelNameLong {
 			t.Errorf("Expected %v, got %v", errChannelNameLong, err)
 		}
@@ -140,7 +128,7 @@ func TestCreateChannel(t *testing.T) {
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
-		err := service.CreateChannel("invalid_name!")
+		err := service.CreateChannel(context.Background(), "invalid_name!")
 		if err != errInvalidChannelName {
 			t.Errorf("Expected %v, got %v", errInvalidChannelName, err)
 		}
@@ -152,7 +140,7 @@ func TestCreateChannel(t *testing.T) {
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
-		err := service.CreateChannel("channel1")
+		err := service.CreateChannel(context.Background(), "channel1")
 		if err != errChannelExists {
 			t.Errorf("Expected %v, got %v", errChannelExists, err)
 		}
@@ -165,7 +153,7 @@ func TestCreateChannel(t *testing.T) {
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
-		err := service.CreateChannel("newChannel")
+		err := service.CreateChannel(context.Background(), "newChannel")
 		if err != saveErr {
 			t.Errorf("Expected %v, got %v", repo.errToReturn, err)
 		}
@@ -177,7 +165,7 @@ func TestCreateChannel(t *testing.T) {
 		ws := &mockWebSocket{}
 		service := NewService(repo, queue, ws)
 
-		err := service.CreateChannel("newChannel")
+		err := service.CreateChannel(context.Background(), "newChannel")
 		if err != queue.errToReturn {
 			t.Errorf("Expected %v, got %v", queue.errToReturn, err)
 		}

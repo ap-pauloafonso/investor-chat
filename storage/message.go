@@ -16,8 +16,8 @@ func NewMessageRepository(db *pgxpool.Pool) *MessageRepository {
 	return &MessageRepository{db}
 }
 
-func (m *MessageRepository) SaveMessage(channel, user, msg string, timestamp time.Time) error {
-	_, err := m.db.Exec(context.Background(), `
+func (m *MessageRepository) SaveMessage(ctx context.Context, channel, user, msg string, timestamp time.Time) error {
+	_, err := m.db.Exec(ctx, `
         INSERT INTO messages (channel_name, user_name, message_text, created_at)
         VALUES ($1, $2, $3, $4)`,
 		channel, user, msg, timestamp)
@@ -27,8 +27,8 @@ func (m *MessageRepository) SaveMessage(channel, user, msg string, timestamp tim
 	return nil
 }
 
-func (m *MessageRepository) GetRecentMessages(channel string, maxMessages int) ([]user.Message, error) {
-	rows, err := m.db.Query(context.Background(), `
+func (m *MessageRepository) GetRecentMessages(ctx context.Context, channel string, maxMessages int) ([]user.Message, error) {
+	rows, err := m.db.Query(ctx, `
         SELECT channel_name, user_name, message_text, created_at
         FROM (
             SELECT channel_name, user_name, message_text, created_at

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -11,7 +12,7 @@ type mockRepository struct {
 	getUserErr  error
 }
 
-func (m *mockRepository) SaveUser(username, password string) error {
+func (m *mockRepository) SaveUser(_ context.Context, username, password string) error {
 	if m.saveUserErr != nil {
 		return m.saveUserErr
 	}
@@ -24,7 +25,7 @@ func (m *mockRepository) SaveUser(username, password string) error {
 	return nil
 }
 
-func (m *mockRepository) GetUser(username string) (*Model, error) {
+func (m *mockRepository) GetUser(_ context.Context, username string) (*Model, error) {
 	if m.getUserErr != nil {
 		return nil, m.getUserErr
 	}
@@ -40,14 +41,14 @@ func TestRegister(t *testing.T) {
 	service := NewService(repo)
 
 	t.Run("Valid Registration", func(t *testing.T) {
-		err := service.Register("user1", "password1")
+		err := service.Register(context.Background(), "user1", "password1")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
 	})
 
 	t.Run("Short Username/Password", func(t *testing.T) {
-		err := service.Register("u", "p")
+		err := service.Register(context.Background(), "u", "p")
 		if err != errUserNamePasswordShort {
 			t.Errorf("Expected %v, got %v", errUserNamePasswordShort, err)
 		}
@@ -55,15 +56,18 @@ func TestRegister(t *testing.T) {
 
 	t.Run("Long Username/Password", func(t *testing.T) {
 		longStr := "loooooooooooooooooooooooooooooooooooooooooooooooooooooong"
-		err := service.Register(longStr, longStr)
+		err := service.Register(context.Background(), longStr, longStr)
 		if err != errUserNamePasswordLong {
 			t.Errorf("Expected %v, got %v", errUserNamePasswordLong, err)
 		}
 	})
 
 	t.Run("Username Already Taken", func(t *testing.T) {
-		service.Register("user2", "password2")        // Register a user
-		err := service.Register("user2", "password2") // Try to register the same user again
+		err := service.Register(context.Background(), "user2", "password2")
+		if err != nil {
+			t.Fatal(err)
+		} // Register a user
+		err = service.Register(context.Background(), "user2", "password2") // Try to register the same user again
 		if err != errUsernameAlreadyTaken {
 			t.Errorf("Expected %v, got %v", errUsernameAlreadyTaken, err)
 		}
@@ -73,7 +77,7 @@ func TestRegister(t *testing.T) {
 		// Simulate an error when storing the user
 		repo.saveUserErr = errStoringUser // Reset the saveUserErr
 		repo.getUserErr = nil
-		err := service.Register("user4", "password4")
+		err := service.Register(context.Background(), "user4", "password4")
 		if err != errStoringUser {
 			t.Errorf("Expected %v, got %v", errStoringUser, err)
 		}
@@ -83,17 +87,20 @@ func TestRegister(t *testing.T) {
 func TestLogin(t *testing.T) {
 	repo := &mockRepository{userData: make(map[string]*Model)}
 	service := NewService(repo)
-	service.Register("user5", "password5")
+	err := service.Register(context.Background(), "user5", "password5")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	t.Run("Valid Login", func(t *testing.T) {
-		err := service.Login("user5", "password5")
+		err := service.Login(context.Background(), "user5", "password5")
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
 	})
 
 	t.Run("Invalid Credentials", func(t *testing.T) {
-		err := service.Login("user5", "wrongPassword")
+		err := service.Login(context.Background(), "user5", "wrongPassword")
 		if err != errInvalidCredentials {
 			t.Errorf("Expected %v, got %v", errInvalidCredentials, err)
 		}

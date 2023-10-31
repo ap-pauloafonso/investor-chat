@@ -1,4 +1,4 @@
-package queue
+package eventbus
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 
 const messageRoutingKey = "message-command"
 
-func (q *Queue) PublishUserMessageCommand(msg string) error {
-	err := q.publisher.Publish(
+func (e *Eventbus) PublishUserMessageCommand(msg string) error {
+	err := e.publisher.Publish(
 		[]byte(msg),
 		[]string{messageRoutingKey},
 		rabbitmq.WithPublishOptionsContentType(contentType),
@@ -21,9 +21,9 @@ func (q *Queue) PublishUserMessageCommand(msg string) error {
 	return nil
 }
 
-func (q *Queue) ConsumeUserMessageCommandForWSBroadcast(fn func(payload []byte) error) error {
+func (e *Eventbus) ConsumeUserMessageCommandForWSBroadcast(fn func(payload []byte) error) error {
 	consumer, err := rabbitmq.NewConsumer(
-		q.conn,
+		e.conn,
 		func(d rabbitmq.Delivery) rabbitmq.Action {
 			err := fn(d.Body)
 			if err != nil {
@@ -42,13 +42,13 @@ func (q *Queue) ConsumeUserMessageCommandForWSBroadcast(fn func(payload []byte) 
 		return err
 	}
 
-	q.consumers = append(q.consumers, consumer)
+	e.consumers = append(e.consumers, consumer)
 	return nil
 }
 
-func (q *Queue) ConsumeUserMessageCommandForStorage(fn func(payload []byte) error) error {
+func (e *Eventbus) ConsumeUserMessageCommandForStorage(fn func(payload []byte) error) error {
 	consumer, err := rabbitmq.NewConsumer(
-		q.conn,
+		e.conn,
 		func(d rabbitmq.Delivery) rabbitmq.Action {
 			err := fn(d.Body)
 			if err != nil {
@@ -66,7 +66,7 @@ func (q *Queue) ConsumeUserMessageCommandForStorage(fn func(payload []byte) erro
 		return err
 	}
 
-	q.consumers = append(q.consumers, consumer)
+	e.consumers = append(e.consumers, consumer)
 
 	return nil
 }
